@@ -1,14 +1,33 @@
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/config";
+import { db } from "@/lib/db/client";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import { RSVPTable } from "@/components/dashboard/RSVPTable";
+import Link from "next/link";
 
 export default async function GuestsPage({ params }: { params: { invitationId: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
+
+  const invitation = await db.invitation.findFirst({
+    where: { id: params.invitationId, userId: (session.user as { id: string }).id },
+    select: { id: true, title: true, coupleName: true },
+  });
+  if (!invitation) notFound();
+
   return (
-    <div className="min-h-screen bg-[#080604] p-8">
-      <h1 className="font-cormorant text-3xl font-light text-cream mb-8">Guest Responses</h1>
-      <p className="text-sm text-cream/40">Invitation ID: {params.invitationId}</p>
-    </div>
+    <DashboardLayout>
+      <div className="p-8 max-w-5xl">
+        <div className="flex items-center gap-3 mb-8">
+          <Link href="/dashboard" className="text-cream/30 hover:text-cream/70 text-sm transition-colors">← Dashboard</Link>
+          <span className="text-cream/20">/</span>
+          <h1 className="font-cormorant text-3xl font-light text-cream">
+            {invitation.coupleName ?? invitation.title} — Guests
+          </h1>
+        </div>
+        <RSVPTable invitationId={params.invitationId} />
+      </div>
+    </DashboardLayout>
   );
 }
