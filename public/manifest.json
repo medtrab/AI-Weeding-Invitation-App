@@ -1,0 +1,13 @@
+{
+  "name": "Invité",
+  "short_name": "Invité",
+  "description": "AI-powered event invitations",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D0B08",
+  "theme_color": "#C9A84C",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

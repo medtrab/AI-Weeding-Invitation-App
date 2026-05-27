@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --gold: #C9A84C;
+  --gold-light: #E8C96A;
+  --gold-pale: #F5E4B0;
+  --deep: #0D0B08;
+  --cream: #FAF7F2;
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+  ::selection { background: rgba(201,168,76,0.25); color: #FAF7F2; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.2); }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.4); }
+}
+
+@layer utilities {
+  .font-cormorant { font-family: var(--font-cormorant), Georgia, serif; }
+  .font-jost { font-family: var(--font-jost), system-ui, sans-serif; }
+  .text-gold { color: var(--gold); }
+  .text-cream { color: var(--cream); }
+  .bg-deep { background-color: var(--deep); }
+  .bg-gold { background-color: var(--gold); }
+  .bg-gold-light { background-color: var(--gold-light); }
+  .border-gold { border-color: var(--gold); }
+}
+
+@keyframes particleFloat {
+  0%   { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+  10%  { opacity: 0.6; }
+  90%  { opacity: 0.2; }
+  100% { transform: translateY(-20px) rotate(360deg); opacity: 0; }
+}
+
+@keyframes loadingBar {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+
+.animate-loading-bar { animation: loadingBar 2s ease forwards; }

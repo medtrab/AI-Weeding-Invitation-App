@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan {
+  free
+  luxe
+  studio
+}
+
+enum InvitationStatus {
+  draft
+  published
+  archived
+}
+
+enum EventType {
+  wedding
+  engagement
+  birthday
+  corporate
+  baby_shower
+  graduation
+  vip
+}
+
+enum RSVPStatus {
+  attending
+  declined
+  maybe
+}
+
+enum MealPreference {
+  standard
+  vegetarian
+  vegan
+  halal
+  kosher
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  avatarUrl    String?
+  passwordHash String?
+  plan         Plan         @default(free)
+  invitations  Invitation[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Invitation {
+  id                   String              @id @default(cuid())
+  userId               String
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug                 String              @unique
+  status               InvitationStatus    @default(draft)
+  eventType            EventType
+  title                String
+  coupleName           String?
+  eventDate            DateTime
+  venue                String
+  venueAddress         String?
+  venueLat             Float?
+  venueLng             Float?
+  coverImageUrl        String?
+  backgroundImageUrl   String?
+  themeId              String?
+  colorPalette         Json
+  fontPrimary          String              @default("Cormorant Garamond")
+  fontSecondary        String              @default("Jost")
+  animationStyle       String              @default("elegant_fade")
+  musicUrl             String?
+  musicLabel           String?
+  language             String              @default("en")
+  textStyle            String              @default("luxury")
+  guestCount           Int?
+  rsvpDeadline         DateTime?
+  personalizedGreeting Boolean             @default(true)
+  showCountdown        Boolean             @default(true)
+  qrCodeUrl            String?
+  publishedAt          DateTime?
+  sections             InvitationSection[]
+  rsvps                RSVP[]
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+}
+
+model InvitationSection {
+  id           String     @id @default(cuid())
+  invitationId String
+  invitation   Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  type         String
+  order        Int
+  visible      Boolean    @default(true)
+  content      Json       @default("{}")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model RSVP {
+  id             String          @id @default(cuid())
+  invitationId   String
+  invitation     Invitation      @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  guestName      String
+  guestEmail     String?
+  status         RSVPStatus
+  guestCount     Int             @default(1)
+  mealPreference MealPreference?
+  notes          String?
+  respondedAt    DateTime        @default(now())
+
+  @@unique([invitationId, guestEmail])
+}
+
+model Theme {
+  id                  String   @id @default(cuid())
+  name                String
+  slug                String   @unique
+  tags                String[]
+  eventTypes          String[]
+  isPremium           Boolean  @default(false)
+  previewImageUrl     String
+  animationPreviewUrl String?
+  colorPalette        Json
+  fontPrimary         String
+  fontSecondary       String
+  animationStyle      String
+  musicSuggestion     String?
+  language            String?
+  createdAt           DateTime @default(now())
+}
