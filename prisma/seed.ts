@@ -1,14 +1,6 @@
-import { config } from "dotenv";
-import { resolve } from "path";
-
-// Load .env from project root before anything else
-config({ path: resolve(__dirname, "../.env") });
-
 import { PrismaClient } from "@prisma/client";
 
-const db = new PrismaClient({
-  datasources: { db: { url: process.env.DATABASE_URL } },
-});
+const db = new PrismaClient();
 
 async function main() {
   console.log("Seeding themes...");
