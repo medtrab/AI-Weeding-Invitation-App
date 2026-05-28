@@ -1,11 +1,11 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Current available free models (May 2026)
+// Confirmed available models from /api/ai/models — ordered by quality/speed
 const MODELS = [
-  "gemini-2.0-flash-lite",
-  "gemini-2.0-flash",
-  "gemini-1.5-flash-8b",
-  "gemini-1.5-flash-latest",
+  "gemini-2.5-flash",      // Best — fast + smart
+  "gemini-2.0-flash",      // Reliable fallback
+  "gemini-2.0-flash-lite", // Lighter fallback
+  "gemini-2.5-flash-lite", // Last resort
 ];
 
 export async function generateWithFallback(
@@ -36,23 +36,27 @@ export async function generateWithFallback(
         msg.includes("quota") ||
         msg.includes("404") ||
         msg.includes("not found") ||
-        msg.includes("not supported");
+        msg.includes("not supported") ||
+        msg.includes("RESOURCE_EXHAUSTED");
 
       if (isRetryable) {
-        console.warn(`Model ${modelName} unavailable, trying next…`);
+        console.warn(`Model ${modelName} unavailable (${msg.slice(0, 60)}), trying next…`);
         lastError = err instanceof Error ? err : new Error(msg);
         continue;
       }
+      // Non-retryable error — throw immediately
       throw err;
     }
   }
 
-  // All models failed — give a clear user-facing message
-  const isQuota = lastError?.message?.includes("429") || lastError?.message?.includes("quota");
+  const isQuota = lastError?.message?.includes("429") ||
+                  lastError?.message?.includes("quota") ||
+                  lastError?.message?.includes("RESOURCE_EXHAUSTED");
+
   throw new Error(
     isQuota
       ? "AI quota exceeded — please wait a minute and try again"
-      : "No AI models available — please check your GEMINI_API_KEY"
+      : `AI unavailable: ${lastError?.message ?? "unknown error"}`
   );
 }
 
