@@ -5,15 +5,23 @@ import { db } from "@/lib/db/client";
 import { BuilderLayout } from "@/components/builder/BuilderLayout";
 import type { Invitation } from "@/types";
 
-export default async function BuilderPage({ params }: { params: { invitationId: string } }) {
+interface Props {
+  params: Promise<{ invitationId: string }>;
+}
+
+export default async function BuilderPage({ params }: Props) {
+  const { invitationId } = await params;
+
   const session = await getServerSession(authOptions);
   if (!(session?.user as { id?: string })?.id) redirect("/login");
-  if (params.invitationId === "new") redirect("/dashboard/invitations?create=true");
+
+  if (invitationId === "new") redirect("/dashboard/invitations?create=true");
 
   const invitation = await db.invitation.findFirst({
-    where: { id: params.invitationId, userId: (session!.user as { id: string }).id },
+    where: { id: invitationId, userId: (session!.user as { id: string }).id },
     include: { sections: { orderBy: { order: "asc" } } },
   });
+
   if (!invitation) notFound();
 
   return <BuilderLayout invitation={JSON.parse(JSON.stringify(invitation)) as Invitation} />;

@@ -6,12 +6,18 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { RSVPTable } from "@/components/dashboard/RSVPTable";
 import Link from "next/link";
 
-export default async function GuestsPage({ params }: { params: { invitationId: string } }) {
+interface Props {
+  params: Promise<{ invitationId: string }>;
+}
+
+export default async function GuestsPage({ params }: Props) {
+  const { invitationId } = await params;
+
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
   const invitation = await db.invitation.findFirst({
-    where: { id: params.invitationId, userId: (session.user as { id: string }).id },
+    where: { id: invitationId, userId: (session.user as { id: string }).id },
     select: { id: true, title: true, coupleName: true },
   });
   if (!invitation) notFound();
@@ -26,7 +32,7 @@ export default async function GuestsPage({ params }: { params: { invitationId: s
             {invitation.coupleName ?? invitation.title} — Guests
           </h1>
         </div>
-        <RSVPTable invitationId={params.invitationId} />
+        <RSVPTable invitationId={invitationId} />
       </div>
     </DashboardLayout>
   );

@@ -4,29 +4,35 @@ import { InvitationRenderer } from "@/components/invitation/InvitationRenderer";
 import type { Metadata } from "next";
 import type { Invitation } from "@/types";
 
-interface Props { params: { slug: string }; searchParams: { guest?: string } }
+interface Props {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ guest?: string }>;
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
   const inv = await db.invitation.findUnique({
-    where: { slug: params.slug },
+    where: { slug },
     select: { title: true, venue: true, coupleName: true },
   });
   if (!inv) return { title: "Invitation Not Found" };
   return {
     title: inv.title,
     description: `You're invited to ${inv.coupleName ?? inv.title} at ${inv.venue}`,
-    openGraph: { title: inv.title, description: `A special invitation for you`, type: "website" },
   };
 }
 
 export default async function InvitationViewerPage({ params, searchParams }: Props) {
+  const { slug }  = await params;
+  const { guest } = await searchParams;
+
   const invitation = await db.invitation.findFirst({
-    where: { slug: params.slug, status: "published" },
+    where: { slug, status: "published" },
     include: { sections: { orderBy: { order: "asc" } } },
   });
   if (!invitation) notFound();
 
-  const guestName = searchParams.guest ? decodeURIComponent(searchParams.guest) : undefined;
+  const guestName = guest ? decodeURIComponent(guest) : undefined;
 
   return (
     <InvitationRenderer
