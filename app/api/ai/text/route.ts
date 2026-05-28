@@ -1,31 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/config";
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { buildTextGenerationPrompt } from "@/lib/ai/prompts";
-
-const anthropic = new Anthropic();
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
+
   const { eventType, coupleName, eventDate, venue, language, textStyle, additionalDetails } = await req.json();
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return NextResponse.json({ detail: "GEMINI_API_KEY not configured" }, { status: 500 });
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const systemPrompt = buildTextGenerationPrompt({ language, textStyle });
 
   const userContent = [
     `Event type: ${eventType}`,
-    coupleName && `Names: ${coupleName}`,
-    eventDate && `Date: ${new Date(eventDate).toLocaleDateString()}`,
-    venue && `Venue: ${venue}`,
+    coupleName        && `Names: ${coupleName}`,
+    eventDate         && `Date: ${new Date(eventDate).toLocaleDateString()}`,
+    venue             && `Venue: ${venue}`,
     additionalDetails && `Additional: ${additionalDetails}`,
   ].filter(Boolean).join("\n");
 
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 512,
-    system: buildTextGenerationPrompt({ language, textStyle }),
-    messages: [{ role: "user", content: userContent }],
-  });
-
-  const text = message.content[0].type === "text" ? message.content[0].text : "";
-  return NextResponse.json({ text });
+  const result = await model.generateContent(`${systemPrompt}\n\n${userContent}`);
+  return NextResponse.json({ text: result.response.text() });
 }
