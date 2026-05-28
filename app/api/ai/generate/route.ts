@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const systemPrompt = buildGenerationPrompt({ eventType, language, textStyle });
+    const systemPrompt = buildGenerationPrompt({ eventType, language: language as "en" | "fr" | "ar" | undefined, textStyle });
     const raw  = await generateWithFallback(`${systemPrompt}\n\nUser request: ${prompt}`, { temperature: 1.1 });
     const data = extractJSON(raw);
     return NextResponse.json(data);
