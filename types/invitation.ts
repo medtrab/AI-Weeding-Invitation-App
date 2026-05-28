@@ -63,6 +63,7 @@ export interface Invitation {
   personalizedGreeting: boolean;
   showCountdown: boolean;
   qrCodeUrl?: string;
+  generatedHtml?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -85,6 +85,7 @@ model Invitation {
   personalizedGreeting Boolean             @default(true)
   showCountdown        Boolean             @default(true)
   qrCodeUrl            String?
+  generatedHtml        String?
   publishedAt          DateTime?
   sections             InvitationSection[]
   rsvps                RSVP[]

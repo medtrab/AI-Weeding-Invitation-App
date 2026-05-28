@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db/client";
 import { InvitationRenderer } from "@/components/invitation/InvitationRenderer";
+import { GeneratedInvitation } from "@/components/invitation/generated/GeneratedInvitation";
 import type { Metadata } from "next";
 import type { Invitation } from "@/types";
 
@@ -19,6 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: inv.title,
     description: `You're invited to ${inv.coupleName ?? inv.title} at ${inv.venue}`,
+    openGraph: { title: inv.title, description: `A special invitation for you`, type: "website" },
   };
 }
 
@@ -33,10 +35,22 @@ export default async function InvitationViewerPage({ params, searchParams }: Pro
   if (!invitation) notFound();
 
   const guestName = guest ? decodeURIComponent(guest) : undefined;
+  const inv = JSON.parse(JSON.stringify(invitation)) as Invitation & { generatedHtml?: string };
 
+  // If AI generated a unique HTML design, show that
+  if (inv.generatedHtml) {
+    // Personalise guest name in generated HTML
+    const personalized = guestName
+      ? inv.generatedHtml.replace(/GUEST_NAME/g, guestName)
+      : inv.generatedHtml;
+
+    return <GeneratedInvitation html={personalized} className="min-h-screen" />;
+  }
+
+  // Otherwise use the standard renderer
   return (
     <InvitationRenderer
-      invitation={JSON.parse(JSON.stringify(invitation)) as Invitation}
+      invitation={inv}
       guestName={guestName}
     />
   );
