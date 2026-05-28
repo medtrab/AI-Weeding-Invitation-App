@@ -36,7 +36,14 @@ export function VibeGeneratorSection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ vibe }),
       });
-      if (res.ok) setResult(await res.json());
+      const text = await res.text();
+      if (text) {
+        const data = JSON.parse(text);
+        if (res.ok) setResult(data);
+        else console.error("Vibe error:", data.detail);
+      }
+    } catch (err) {
+      console.error("Vibe generate error:", err);
     } finally { clearInterval(iv); setLoading(false); }
   };
 

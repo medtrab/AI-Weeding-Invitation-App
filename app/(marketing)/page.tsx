@@ -73,8 +73,13 @@ function AIGenerator() {
     const iv = setInterval(() => setStatusIdx((i) => Math.min(i+1, STATUS_MSGS.length-1)), 520);
     try {
       const res  = await fetch("/api/ai/generate", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ prompt }) });
-      const data = await res.json();
+      const text = await res.text();
+      if (!text) throw new Error("Empty response from AI");
+      const data = JSON.parse(text);
       if (res.ok) setResult(data);
+      else console.error("AI error:", data.detail);
+    } catch (err) {
+      console.error("Generate error:", err);
     } finally { clearInterval(iv); setLoading(false); }
   };
 

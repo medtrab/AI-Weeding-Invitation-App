@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/config";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { buildGenerationPrompt } from "@/lib/ai/prompts";
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
+  let body: Record<string, string>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ detail: "Invalid request body" }, { status: 400 });
   }
 
-  const { prompt, eventType, language = "en", textStyle = "luxury" } = await req.json();
+  const { prompt, eventType, language = "en", textStyle = "luxury" } = body;
+
   if (!prompt?.trim()) {
     return NextResponse.json({ detail: "Prompt is required" }, { status: 422 });
   }
@@ -20,22 +21,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ detail: "GEMINI_API_KEY not configured" }, { status: 500 });
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
-    generationConfig: { temperature: 1.1, topP: 0.95 },
-  });
-
-  const systemPrompt = buildGenerationPrompt({ eventType, language, textStyle });
-  const result = await model.generateContent(`${systemPrompt}\n\nUser request: ${prompt}`);
-  const raw    = result.response.text();
-  const clean  = raw.replace(/```json|```/g, "").trim();
-
   try {
-    return NextResponse.json(JSON.parse(clean));
-  } catch {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      generationConfig: { temperature: 1.1, topP: 0.95 },
+    });
+
+    const systemPrompt = buildGenerationPrompt({ eventType, language, textStyle });
+    const result = await model.generateContent(`${systemPrompt}\n\nUser request: ${prompt}`);
+    const raw    = result.response.text();
+    const clean  = raw.replace(/```json|```/g, "").trim();
+
+    // Extract JSON even if there's surrounding text
+    const jsonMatch = clean.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return NextResponse.json({ detail: "AI returned no valid JSON" }, { status: 500 });
+    }
+
+    return NextResponse.json(JSON.parse(jsonMatch[0]));
+  } catch (err) {
+    console.error("AI generate error:", err);
     return NextResponse.json(
-      { detail: "AI returned malformed response, please try again" },
+      { detail: err instanceof Error ? err.message : "AI generation failed" },
       { status: 500 }
     );
   }
