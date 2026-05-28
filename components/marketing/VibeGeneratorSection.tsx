@@ -24,11 +24,12 @@ export function VibeGeneratorSection() {
   const [vibe, setVibe]       = useState("");
   const [loading, setLoading] = useState(false);
   const [stepIdx, setStepIdx] = useState(0);
+  const [error, setError]     = useState("");
   const [result, setResult]   = useState<null | { interpretation: string; themes: { name: string; tagline: string; mood: string; colorPalette: Record<string,string>; visualDescription: string; musicSuggestion: string; uniqueDetail: string }[] }>(null);
 
   const generate = async () => {
     if (!vibe.trim()) return;
-    setLoading(true); setResult(null); setStepIdx(0);
+    setLoading(true); setResult(null); setError(""); setStepIdx(0);
     const iv = setInterval(() => setStepIdx((i) => Math.min(i + 1, STEPS.length - 1)), 900);
     try {
       const res  = await fetch("/api/ai/vibe", {
@@ -40,10 +41,10 @@ export function VibeGeneratorSection() {
       if (text) {
         const data = JSON.parse(text);
         if (res.ok) setResult(data);
-        else console.error("Vibe error:", data.detail);
+        else setError(data.detail ?? "Generation failed");
       }
     } catch (err) {
-      console.error("Vibe generate error:", err);
+      setError("Something went wrong, please try again");
     } finally { clearInterval(iv); setLoading(false); }
   };
 
@@ -86,6 +87,13 @@ export function VibeGeneratorSection() {
           <Sparkles size={14} />
           {loading ? STEPS[stepIdx] : "Generate 3 Creative Themes"}
         </button>
+
+        {/* Error message */}
+        {error && (
+          <div className="mt-4 px-4 py-3 border border-red-500/30 bg-red-500/5 text-xs text-red-400 text-center">
+            {error}
+          </div>
+        )}
 
         {/* Loading shimmer */}
         {loading && (
