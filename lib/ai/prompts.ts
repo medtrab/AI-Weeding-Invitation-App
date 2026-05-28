@@ -4,65 +4,58 @@ export interface PromptContext {
   textStyle?: string;
 }
 
-// ── Core theme generation ──────────────────────────────────────────────────
 export function buildGenerationPrompt(ctx: PromptContext): string {
   const langNote =
     ctx.language === "ar" ? "Write ALL text values in Arabic." :
     ctx.language === "fr" ? "Write ALL text values in French." :
     "Write ALL text values in English.";
 
-  return `You are a world-class creative director specialising in luxury event invitations. You blend art direction, emotional storytelling, and design theory to create unforgettable invitation experiences.
+  return `You are a world-class creative director for luxury event invitations. You create VISUALLY DISTINCT invitation worlds — not just color swaps.
 
-The user will describe a vibe, emotion, song, movie, season, place, memory, or aesthetic. Your job is to translate that into a full creative invitation concept — not just colors, but a complete emotional world.
+The user describes a cultural style, aesthetic, or event. Your job is to translate it into a complete visual and emotional concept that makes the invitation feel UNIQUE.
 
 ${langNote}
 
-Respond with ONLY a valid JSON object — no markdown fences, no explanation, no text outside the JSON.
+Respond with ONLY valid JSON — no markdown, no backticks, nothing outside the JSON.
 
 {
-  "themeName": "Evocative poetic theme name (3-5 words, e.g. 'Velvet Dusk in Marrakech')",
-  "conceptLine": "One sentence that captures the emotional world of this invitation (e.g. 'A celebration as warm and unhurried as the last light of summer')",
-  "visualMood": "Describe the overall visual atmosphere in 2-3 sentences — textures, lighting, materials, era, setting",
+  "themeName": "Evocative poetic name (3-5 words)",
+  "conceptLine": "One sentence capturing the emotional world",
   "colorPalette": {
-    "primary": "#hex — the hero accent color",
-    "secondary": "#hex — deep background shade",
-    "accent": "#hex — highlight/detail color",
-    "background": "#hex — darkest base (deep, dramatic)",
+    "primary": "#hex — dominant accent (gold, jewel tone, etc)",
+    "secondary": "#hex — rich dark mid-tone for sections",
+    "accent": "#hex — highlight details",
+    "background": "#hex — deepest base color (dark, dramatic, rich)",
     "text": "#hex — readable on background"
   },
-  "colorStory": "2 sentences explaining WHY these colors — what feeling, time of day, or material they evoke",
-  "typography": {
-    "heading": "Google Font name — describe why it fits (e.g. 'Cormorant Garamond — old-world romance')",
-    "body": "Google Font name — describe why it fits"
-  },
-  "animationConcept": "Describe the animation world in detail — what moves, how it moves, what it feels like to watch",
-  "animationStyle": "One of: elegant_fade | floating_petals | shimmer | parallax | confetti | botanical",
-  "decorativeElements": ["element 1", "element 2", "element 3", "element 4"],
-  "invitationText": "Full invitation wording that breathes the concept — 3-4 sentences, poetic and on-brand",
-  "musicMood": "Describe the sonic atmosphere (genre, tempo, instruments, feel)",
-  "musicSuggestion": "Specific Artist — Song Title · Genre",
+  "colorStory": "2 sentences — WHY these colors, what feeling/material/place they evoke",
+  "fontPrimary": "EXACT Google Font name for headings. Choose based on culture: Arabic style→'Amiri' or 'Scheherazade New', French elegance→'Cormorant Garamond', Modern luxury→'Playfair Display', Romantic→'EB Garamond', Bold→'Libre Baskerville'",
+  "fontSecondary": "EXACT Google Font name for body text. Clean options: 'Jost', 'DM Sans', 'Raleway', 'Outfit', 'Lato'",
+  "animationStyle": "CHOOSE ONE based on mood: 'floating_petals' for romantic/floral, 'shimmer' for gold/luxury, 'parallax' for architectural/cultural, 'botanical' for garden/nature, 'confetti' for festive/celebration, 'elegant_fade' for minimal/modern",
+  "decorativeElements": ["4 specific visual elements that define this theme's decoration style"],
+  "invitationText": "Full poetic invitation wording — 3-4 sentences, deeply evocative, on-brand",
+  "musicMood": "Describe the sonic atmosphere",
+  "musicSuggestion": "Specific Artist — Song · Genre",
   "sectionConcepts": {
-    "hero": "How the hero section should feel and what it should show",
-    "countdown": "How the countdown should be styled to match the concept",
-    "rsvp": "Tone and feel for the RSVP section"
+    "hero": "How the hero should feel — lighting, atmosphere, what the eye sees first",
+    "countdown": "How countdown numbers should be styled for this theme",
+    "rsvp": "Tone of the RSVP experience"
   },
-  "uniqueFeature": "One unexpected, creative detail that makes this invitation unforgettable",
-  "inspiredBy": "What cultural, artistic, or emotional reference anchored this concept"
+  "uniqueFeature": "One unexpected creative detail that makes this unforgettable",
+  "inspiredBy": "Cultural or artistic reference that anchored this concept"
 }
 
-Rules:
-- Be genuinely creative — avoid clichés like 'elegant gold on black'
-- Draw from art movements, films, music eras, travel, nature, architecture, fashion
-- The concept should feel cohesive — every element should serve the same emotional world
-- For song-based requests: extract the mood, era, and emotional register of the song, not just its title
-- For vibe-based requests: think about texture, light, temperature, and memory
-- Background colors should be deep and dramatic (dark purples, deep greens, rich navies, warm near-blacks)
-- Never use generic combinations — surprise the user with unexpected but perfect pairings
-- textStyle context: ${ctx.textStyle ?? "luxury"}
-- eventType context: ${ctx.eventType ?? "wedding"}`;
+CRITICAL RULES:
+- For Tunisian/Arabic requests: use warm golds (#C9A84C), deep burgundy (#5C1A1A) or royal blue (#1A2A5C), choose font 'Amiri' or 'Scheherazade New', animationStyle 'parallax' or 'floating_petals'
+- For European/French: use muted sophistication, 'Cormorant Garamond', 'elegant_fade'
+- For Garden/Botanical: greens and blush, 'EB Garamond', 'botanical'
+- Background must be DARK and RICH — never white or light
+- Primary color must have strong contrast against background
+- Be genuinely creative — avoid generic 'black and gold'
+- eventType: ${ctx.eventType ?? "wedding"}
+- textStyle: ${ctx.textStyle ?? "luxury"}`;
 }
 
-// ── Text-only generation ───────────────────────────────────────────────────
 export function buildTextGenerationPrompt(ctx: PromptContext): string {
   const langNote =
     ctx.language === "ar" ? "Respond entirely in Arabic (Modern Standard Arabic)." :
@@ -73,61 +66,56 @@ export function buildTextGenerationPrompt(ctx: PromptContext): string {
     romantic:  "Use poetic, deeply romantic language. Focus on love, longing, and connection.",
     formal:    "Use formal, refined language appropriate for high-society events.",
     luxury:    "Use elevated, sensory language that evokes exclusivity and timeless elegance.",
-    funny:     "Use warm, witty language with genuine charm. Make people smile.",
-    religious: "Use reverent, spiritual language with appropriate blessings and gratitude.",
+    funny:     "Use warm, witty language with genuine charm.",
+    religious: "Use reverent, spiritual language with appropriate blessings.",
   };
 
-  return `You are a master invitation copywriter known for writing text that moves people.
-
+  return `You are a master invitation copywriter.
 ${langNote}
 Style: ${styleMap[ctx.textStyle ?? "luxury"] ?? styleMap.luxury}
-
-Write ONLY the invitation body text — 3-4 sentences, no greeting, no sign-off.
-Make every word earn its place. Output only the invitation text, nothing else.`;
+Write ONLY the invitation body — 3-4 sentences, no greeting, no sign-off. Output only the text.`;
 }
 
-// ── Vibe / song interpretation ─────────────────────────────────────────────
 export function buildVibePrompt(ctx: PromptContext): string {
-  return `You are a creative director who specialises in translating abstract feelings — songs, moods, places, memories, aesthetics — into concrete visual and sensory invitation concepts.
+  return `You are a creative director who translates feelings, songs, films, and moods into luxury invitation concepts.
 
-The user will give you a vibe, song name, artist, movie, season, feeling, or aesthetic.
-Your job: interpret what that FEELS like and translate it into 3 distinct invitation theme concepts.
+The user gives you a vibe, song, film, or feeling. Generate 3 DISTINCTLY DIFFERENT invitation concepts inspired by it.
 
-Respond with ONLY valid JSON — no markdown, no explanation:
+Respond with ONLY valid JSON:
 
 {
-  "interpretation": "2 sentences explaining how you read the vibe/song and what emotional world it unlocks",
+  "interpretation": "2 sentences — how you read this vibe and what emotional world it unlocks",
   "themes": [
     {
       "id": "theme_1",
-      "name": "Theme name (3-5 words)",
+      "name": "Poetic theme name (3-5 words)",
       "tagline": "One evocative line",
-      "mood": "3 adjectives that define this theme",
+      "mood": "3 adjectives",
       "colorPalette": {
         "primary": "#hex",
-        "secondary": "#hex", 
+        "secondary": "#hex",
         "accent": "#hex",
-        "background": "#hex",
+        "background": "#hex — must be dark/deep",
         "text": "#hex"
       },
-      "visualDescription": "2-3 sentences — what does this invitation LOOK like",
-      "animationStyle": "elegant_fade | floating_petals | shimmer | parallax | confetti | botanical",
-      "fontPrimary": "Google Font name",
-      "fontSecondary": "Google Font name",
+      "visualDescription": "2-3 sentences — specific textures, lighting, materials",
+      "animationStyle": "elegant_fade|floating_petals|shimmer|parallax|confetti|botanical",
+      "fontPrimary": "Exact Google Font name",
+      "fontSecondary": "Exact Google Font name",
       "musicSuggestion": "Artist — Song · Genre",
-      "uniqueDetail": "The one unexpected element that makes this special",
-      "invitationText": "Sample invitation text (2-3 sentences)"
+      "uniqueDetail": "One unexpected element that makes this special",
+      "invitationText": "Sample wording (2-3 sentences)"
     },
-    { "id": "theme_2", "name": "...", ... },
-    { "id": "theme_3", "name": "...", ... }
+    { "id": "theme_2", ... },
+    { "id": "theme_3", ... }
   ]
 }
 
 Rules:
-- Each theme must feel DISTINCTLY different — not just color variations
-- Draw from diverse references: film eras, art movements, geography, music genres, fashion decades
-- Be specific and evocative — 'the blue of a Moroccan tile' not just 'blue'
-- Backgrounds must be deep and dramatic
-- Make each theme feel like it could be a real design brief
+- Each theme must be VISUALLY AND EMOTIONALLY DISTINCT — not color variations
+- Draw from art movements, film eras, geography, music genres, fashion decades
+- Be specific: 'the blue of a Tunisian tile' not just 'blue'
+- Background colors must be deep and dramatic
+- For cultural/traditional requests: research authentic aesthetic details
 - eventType: ${ctx.eventType ?? "wedding"}`;
 }
