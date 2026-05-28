@@ -1,6 +1,14 @@
+import { config } from "dotenv";
+import { resolve } from "path";
+
+// Load .env from project root before anything else
+config({ path: resolve(__dirname, "../.env") });
+
 import { PrismaClient } from "@prisma/client";
 
-const db = new PrismaClient();
+const db = new PrismaClient({
+  datasources: { db: { url: process.env.DATABASE_URL } },
+});
 
 async function main() {
   console.log("Seeding themes...");
@@ -13,13 +21,7 @@ async function main() {
       eventTypes: ["wedding", "engagement"],
       isPremium: false,
       previewImageUrl: "/themes/al-andalus-gold.jpg",
-      colorPalette: {
-        primary: "#C9A84C",
-        secondary: "#1A0E0A",
-        accent: "#8B2020",
-        background: "#0D0B08",
-        text: "#F5E4B0",
-      },
+      colorPalette: { primary:"#C9A84C", secondary:"#1A0E0A", accent:"#8B2020", background:"#0D0B08", text:"#F5E4B0" },
       fontPrimary: "Cormorant Garamond",
       fontSecondary: "Jost",
       animationStyle: "floating_petals",
@@ -33,13 +35,7 @@ async function main() {
       eventTypes: ["wedding", "engagement"],
       isPremium: false,
       previewImageUrl: "/themes/celestial-blue.jpg",
-      colorPalette: {
-        primary: "#7A9ACC",
-        secondary: "#0F1520",
-        accent: "#4A7ACC",
-        background: "#08101A",
-        text: "#E8F0FA",
-      },
+      colorPalette: { primary:"#7A9ACC", secondary:"#0F1520", accent:"#4A7ACC", background:"#08101A", text:"#E8F0FA" },
       fontPrimary: "Playfair Display",
       fontSecondary: "DM Sans",
       animationStyle: "elegant_fade",
@@ -53,13 +49,7 @@ async function main() {
       eventTypes: ["wedding", "engagement"],
       isPremium: true,
       previewImageUrl: "/themes/rosa-eterna.jpg",
-      colorPalette: {
-        primary: "#CC6666",
-        secondary: "#1A0808",
-        accent: "#E8A0A0",
-        background: "#0D0808",
-        text: "#FAE8E8",
-      },
+      colorPalette: { primary:"#CC6666", secondary:"#1A0808", accent:"#E8A0A0", background:"#0D0808", text:"#FAE8E8" },
       fontPrimary: "EB Garamond",
       fontSecondary: "Raleway",
       animationStyle: "botanical",
@@ -73,13 +63,7 @@ async function main() {
       eventTypes: ["wedding", "birthday", "engagement"],
       isPremium: false,
       previewImageUrl: "/themes/jardin-secret.jpg",
-      colorPalette: {
-        primary: "#4A9468",
-        secondary: "#060A08",
-        accent: "#80C4A0",
-        background: "#0C1510",
-        text: "#E8F5EE",
-      },
+      colorPalette: { primary:"#4A9468", secondary:"#060A08", accent:"#80C4A0", background:"#0C1510", text:"#E8F5EE" },
       fontPrimary: "Cormorant Garamond",
       fontSecondary: "Jost",
       animationStyle: "botanical",
@@ -93,13 +77,7 @@ async function main() {
       eventTypes: ["corporate", "vip", "graduation"],
       isPremium: true,
       previewImageUrl: "/themes/midnight-gala.jpg",
-      colorPalette: {
-        primary: "#7A9ACC",
-        secondary: "#0F1520",
-        accent: "#4A7ACC",
-        background: "#08101A",
-        text: "#E8F0FA",
-      },
+      colorPalette: { primary:"#7A9ACC", secondary:"#0F1520", accent:"#4A7ACC", background:"#08101A", text:"#E8F0FA" },
       fontPrimary: "Playfair Display",
       fontSecondary: "Outfit",
       animationStyle: "shimmer",
