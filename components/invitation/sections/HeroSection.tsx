@@ -1,13 +1,13 @@
 "use client";
-import React, { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
+import type { JSX } from "react";
 import type { InvitationSection, Invitation } from "@/types";
 
 interface Props { section: InvitationSection; invitation: Invitation; isPreview?: boolean; }
 
 // ── Animation style renderers ──────────────────────────────────────────────
 
-function FloatingPetals({ color }: { color: string }) {
+function FloatingPetals({ color }: { color: string }): JSX.Element {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
       {Array.from({ length: 18 }).map((_, i) => (
@@ -25,7 +25,7 @@ function FloatingPetals({ color }: { color: string }) {
   );
 }
 
-function GoldParticles({ color }: { color: string }) {
+function GoldParticles({ color }: { color: string }): JSX.Element {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
       {Array.from({ length: 40 }).map((_, i) => (
@@ -47,7 +47,7 @@ function GoldParticles({ color }: { color: string }) {
   );
 }
 
-function ArabesquePattern({ color }: { color: string }) {
+function ArabesquePattern({ color }: { color: string }): JSX.Element {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-10">
       <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -65,7 +65,7 @@ function ArabesquePattern({ color }: { color: string }) {
   );
 }
 
-function GeometricMosaic({ color }: { color: string }) {
+function GeometricMosaic({ color }: { color: string }): JSX.Element {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-8">
       <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -82,7 +82,7 @@ function GeometricMosaic({ color }: { color: string }) {
   );
 }
 
-function BottomOrnament({ color }: { color: string }) {
+function BottomOrnament({ color }: { color: string }): JSX.Element {
   return (
     <div className="absolute bottom-0 left-0 right-0 overflow-hidden">
       <svg viewBox="0 0 1440 120" preserveAspectRatio="none" width="100%" height="80">
@@ -99,7 +99,7 @@ function BottomOrnament({ color }: { color: string }) {
   );
 }
 
-function TopArchOrnament({ color }: { color: string }) {
+function TopArchOrnament({ color }: { color: string }): JSX.Element {
   return (
     <div className="absolute top-0 left-0 right-0 flex justify-center pt-4">
       <svg viewBox="0 0 400 60" width="400" height="60">
@@ -113,36 +113,10 @@ function TopArchOrnament({ color }: { color: string }) {
   );
 }
 
-// ── Names sub-component with explicit ReactNode typing ─────────────────────
-function NamesBlock({ invitation, p }: { invitation: Invitation; p: { primary: string; text: string; secondary: string; accent: string; background: string } }): React.ReactElement {
-  return (
-    <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.2, delay: 0.5 }}>
-      {invitation.coupleName?.includes("&") ? (
-        <>
-          {invitation.coupleName.split("&").map((name, i, arr) => (
-            <span key={i}>
-              <span className="block font-light leading-tight" style={{ fontFamily: `'${invitation.fontPrimary}', Georgia, serif`, fontSize: "clamp(3.5rem, 8vw, 6rem)", color: p.text }}>
-                {name.trim()}
-              </span>
-              {i < arr.length - 1 && (
-                <span className="block italic my-1" style={{ fontFamily: `'${invitation.fontPrimary}', Georgia, serif`, fontSize: "clamp(2.5rem, 6vw, 4.5rem)", color: p.primary }}>&</span>
-              )}
-            </span>
-          ))}
-        </>
-      ) : (
-        <span className="block font-light" style={{ fontFamily: `'${invitation.fontPrimary}', Georgia, serif`, fontSize: "clamp(3rem, 7vw, 5rem)", color: p.text }}>
-          {invitation.coupleName ?? invitation.title}
-        </span>
-      )}
-    </motion.div>
-  );
-}
-
 // ── Main Hero ──────────────────────────────────────────────────────────────
-export function HeroSection({ section, invitation }: Props) {
+export function HeroSection({ section, invitation }: Props): JSX.Element {
   const eyebrow = String(section.content.eyebrow ?? "✦ — You're Invited — ✦");
-  const p = invitation.colorPalette as { primary: string; secondary: string; accent: string; background: string; text: string };
+  const p = invitation.colorPalette;
   const anim = invitation.animationStyle;
 
   const bgStyle: React.CSSProperties = invitation.backgroundImageUrl
@@ -199,7 +173,34 @@ export function HeroSection({ section, invitation }: Props) {
         </motion.div>
 
         {/* Names */}
-        <NamesBlock invitation={invitation} p={p} />
+        {/* @ts-expect-error framer-motion JSX type in strict bundler mode */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1.2, delay: 0.5 }}
+          style={{ display: "block" }}
+        >
+          {String(invitation.coupleName ?? invitation.title).includes("&") ? (
+            <div>
+              {String(invitation.coupleName ?? invitation.title).split("&").map((name: string, i: number, arr: string[]) => (
+                <span key={i}>
+                  <span className="block font-light leading-tight" style={{ fontFamily: `'${invitation.fontPrimary}', Georgia, serif`, fontSize: "clamp(3.5rem, 8vw, 6rem)", color: String(p.text) }}>
+                    {name.trim()}
+                  </span>
+                  {i < arr.length - 1 && (
+                    <span className="block italic my-1" style={{ fontFamily: `'${invitation.fontPrimary}', Georgia, serif`, fontSize: "clamp(2.5rem, 6vw, 4.5rem)", color: String(p.primary) }}>
+                      &amp;
+                    </span>
+                  )}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <span className="block font-light" style={{ fontFamily: `'${invitation.fontPrimary}', Georgia, serif`, fontSize: "clamp(3rem, 7vw, 5rem)", color: String(p.text) }}>
+              {String(invitation.coupleName ?? invitation.title)}
+            </span>
+          )}
+        </motion.div>
 
         {/* Divider */}
         <motion.div
