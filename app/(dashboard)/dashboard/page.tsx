@@ -22,7 +22,7 @@ export default async function DashboardPage() {
     db.rSVP.count({ where: { invitation: { userId } } }),
   ]);
 
-  const published = invitations.filter((i) => i.status === "published").length;
+  const published = invitations.filter((i: { status: string }) => i.status === "published").length;
 
   return (
     <DashboardClient

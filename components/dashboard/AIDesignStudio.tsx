@@ -55,7 +55,7 @@ export function AIDesignStudio({ invitationId, coupleName, eventDate, venue }: P
   const [photos, setPhotos]       = useState<string[]>([]);
   const [loading, setLoading]     = useState(false);
   const [stepIdx, setStepIdx]     = useState(0);
-  const [spec, setSpec]           = useState<unknown | null>(null);
+  const [spec, setSpec]           = useState<Record<string, unknown> | null>(null);
   const [error, setError]         = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -84,7 +84,7 @@ export function AIDesignStudio({ invitationId, coupleName, eventDate, venue }: P
         }),
       });
       const text = await res.text();
-      let data: { spec?: unknown; detail?: string };
+      let data: { spec?: Record<string, unknown>; detail?: string };
       try { data = JSON.parse(text); } catch { throw new Error("Empty response — try again"); }
       if (!res.ok) throw new Error(data.detail ?? "Failed");
       if (!data.spec) throw new Error("No design received");

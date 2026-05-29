@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const prompt = buildVibePrompt({ eventType, language });
+    const prompt = buildVibePrompt({ eventType, language: language as "en" | "fr" | "ar" | undefined });
     const raw    = await generateWithFallback(`${prompt}\n\nUser vibe/song/mood: "${vibe}"`, { temperature: 1.2 });
     const data   = extractJSON(raw);
     return NextResponse.json(data);

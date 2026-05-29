@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   const { eventType, coupleName, eventDate, venue, language, textStyle, additionalDetails } = body;
 
   try {
-    const systemPrompt = buildTextGenerationPrompt({ language, textStyle });
+    const systemPrompt = buildTextGenerationPrompt({ language: language as "en" | "fr" | "ar" | undefined, textStyle });
     const userContent  = [
       `Event type: ${eventType}`,
       coupleName        && `Names: ${coupleName}`,

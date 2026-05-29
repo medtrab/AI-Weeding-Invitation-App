@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import type { InvitationSection, Invitation } from "@/types";
 
@@ -113,10 +113,36 @@ function TopArchOrnament({ color }: { color: string }) {
   );
 }
 
+// ── Names sub-component with explicit ReactNode typing ─────────────────────
+function NamesBlock({ invitation, p }: { invitation: Invitation; p: { primary: string; text: string; secondary: string; accent: string; background: string } }): React.ReactElement {
+  return (
+    <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.2, delay: 0.5 }}>
+      {invitation.coupleName?.includes("&") ? (
+        <>
+          {invitation.coupleName.split("&").map((name, i, arr) => (
+            <span key={i}>
+              <span className="block font-light leading-tight" style={{ fontFamily: `'${invitation.fontPrimary}', Georgia, serif`, fontSize: "clamp(3.5rem, 8vw, 6rem)", color: p.text }}>
+                {name.trim()}
+              </span>
+              {i < arr.length - 1 && (
+                <span className="block italic my-1" style={{ fontFamily: `'${invitation.fontPrimary}', Georgia, serif`, fontSize: "clamp(2.5rem, 6vw, 4.5rem)", color: p.primary }}>&</span>
+              )}
+            </span>
+          ))}
+        </>
+      ) : (
+        <span className="block font-light" style={{ fontFamily: `'${invitation.fontPrimary}', Georgia, serif`, fontSize: "clamp(3rem, 7vw, 5rem)", color: p.text }}>
+          {invitation.coupleName ?? invitation.title}
+        </span>
+      )}
+    </motion.div>
+  );
+}
+
 // ── Main Hero ──────────────────────────────────────────────────────────────
 export function HeroSection({ section, invitation }: Props) {
-  const eyebrow = (section.content.eyebrow as string) || "✦ — You're Invited — ✦";
-  const p = invitation.colorPalette;
+  const eyebrow = String(section.content.eyebrow ?? "✦ — You're Invited — ✦");
+  const p = invitation.colorPalette as { primary: string; secondary: string; accent: string; background: string; text: string };
   const anim = invitation.animationStyle;
 
   const bgStyle: React.CSSProperties = invitation.backgroundImageUrl
@@ -173,53 +199,7 @@ export function HeroSection({ section, invitation }: Props) {
         </motion.div>
 
         {/* Names */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.2, delay: 0.5 }}
-        >
-          {invitation.coupleName?.includes("&") ? (
-            <>
-              {invitation.coupleName.split("&").map((name, i, arr) => (
-                <span key={i}>
-                  <span
-                    className="block font-light leading-tight"
-                    style={{
-                      fontFamily: `'${invitation.fontPrimary}', Georgia, serif`,
-                      fontSize: "clamp(3.5rem, 8vw, 6rem)",
-                      color: p.text,
-                    }}
-                  >
-                    {name.trim()}
-                  </span>
-                  {i < arr.length - 1 && (
-                    <span
-                      className="block italic my-1"
-                      style={{
-                        fontFamily: `'${invitation.fontPrimary}', Georgia, serif`,
-                        fontSize: "clamp(2.5rem, 6vw, 4.5rem)",
-                        color: p.primary,
-                      }}
-                    >
-                      &
-                    </span>
-                  )}
-                </span>
-              ))}
-            </>
-          ) : (
-            <span
-              className="block font-light"
-              style={{
-                fontFamily: `'${invitation.fontPrimary}', Georgia, serif`,
-                fontSize: "clamp(3rem, 7vw, 5rem)",
-                color: p.text,
-              }}
-            >
-              {invitation.coupleName ?? invitation.title}
-            </span>
-          )}
-        </motion.div>
+        <NamesBlock invitation={invitation} p={p} />
 
         {/* Divider */}
         <motion.div
@@ -273,7 +253,7 @@ export function HeroSection({ section, invitation }: Props) {
             animate={{ opacity: 0.55 }}
             transition={{ delay: 1.4 }}
           >
-            {section.content.message as string}
+            {String(section.content.message)}
           </motion.p>
         )}
       </div>

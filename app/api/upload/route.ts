@@ -1,13 +1,14 @@
+import { getSessionUser } from "@/lib/auth/session";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/config";
+
+
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getSessionUser();
+  if (!user) {
     return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
   }
 
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
       const buffer = Buffer.from(bytes);
       const base64 = `data:${file.type};base64,${buffer.toString("base64")}`;
       const folder = (form.get("folder") as string) || "general";
-      const userId = (session.user as { id: string }).id;
+      const userId = user.id;
 
       const result = await cloudinary.uploader.upload(base64, {
         folder: `invite/${userId}/${folder}`,
@@ -72,8 +73,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const user = await getSessionUser();
+  if (!user) {
     return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
   }
 
