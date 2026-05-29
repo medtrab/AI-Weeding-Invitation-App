@@ -4,165 +4,204 @@ import { motion, AnimatePresence } from "framer-motion";
 import { VolumeX, Volume2, Pause, Play } from "lucide-react";
 import type { Invitation } from "@/types";
 
-// ── Ambient Music Engine ───────────────────────────────────────────────────
-// Pure Web Audio API — no files, no CORS, no broken URLs. Always works.
+// ── Ambient Music Engine ────────────────────────────────────────────────────
+// Pure Web Audio API synthesis — Arabic/Mediterranean ambient music
+// No files, no CORS, no broken URLs. Works on all modern browsers.
 
-function buildAndStartEngine(): AudioContext {
-  const AudioCtx = window.AudioContext ||
-    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-  const ctx = new AudioCtx();
+function startAmbientMusic(ctx: AudioContext): void {
+  // Ensure context is running
+  if (ctx.state === "suspended") ctx.resume();
 
   const master = ctx.createGain();
   master.connect(ctx.destination);
+
+  // Fade in over 3 seconds
   master.gain.setValueAtTime(0, ctx.currentTime);
-  master.gain.linearRampToValueAtTime(0.6, ctx.currentTime + 4); // fade in over 4s
+  master.gain.linearRampToValueAtTime(0.55, ctx.currentTime + 3);
 
-  // Arabic pentatonic: A2 B2 D3 E3 G3 A3 B3 D4 E4 G4
-  const scale = [110, 123.5, 146.8, 164.8, 196, 220, 246.9, 293.7, 329.6, 392];
+  // Arabic pentatonic scale (A minor with flat 2nd — very Mediterranean)
+  const scale = [
+    110, 116.5, 138.6, 164.8, 185,    // A2 Bb2 Db3 E3 F#3
+    220, 233,   277.2, 329.6, 370,    // A3 Bb3 Db4 E4 F#4
+    440, 466,   554.4, 659.3,         // A4 Bb4 Db5 E5
+  ];
 
-  function tone(
-    freq: number, start: number, dur: number,
-    type: OscillatorType = "sine", vol = 0.12
-  ) {
+  // Creates a warm triangle-wave note (oud-like)
+  function note(freq: number, t: number, dur: number, vol = 0.1) {
     const osc  = ctx.createOscillator();
     const gain = ctx.createGain();
     const lpf  = ctx.createBiquadFilter();
     lpf.type = "lowpass";
-    lpf.frequency.value = 1200;
+    lpf.frequency.value = 1400;
+    lpf.Q.value = 0.7;
 
-    osc.type = type;
+    osc.type = "triangle";
     osc.frequency.value = freq;
-    osc.detune.value = (Math.random() - 0.5) * 6;
+    osc.detune.value = (Math.random() - 0.5) * 8;
+    osc.connect(lpf);
+    lpf.connect(gain);
+    gain.connect(master);
 
-    osc.connect(lpf); lpf.connect(gain); gain.connect(master);
-
-    gain.gain.setValueAtTime(0, start);
-    gain.gain.linearRampToValueAtTime(vol, start + 0.06);
-    gain.gain.exponentialRampToValueAtTime(vol * 0.25, start + dur * 0.5);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
-    osc.start(start);
-    osc.stop(start + dur + 0.05);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(vol, t + 0.04);
+    gain.gain.exponentialRampToValueAtTime(vol * 0.2, t + dur * 0.6);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
   }
 
-  function pad(freq: number, start: number, dur: number, vol = 0.05) {
-    [-5, 0, 5].forEach(d => {
+  // Creates a soft sine pad (string-like)
+  function pad(freq: number, t: number, dur: number, vol = 0.04) {
+    for (const detune of [-4, 0, 4]) {
       const osc  = ctx.createOscillator();
       const gain = ctx.createGain();
       const lpf  = ctx.createBiquadFilter();
-      lpf.type = "lowpass"; lpf.frequency.value = 600;
+      lpf.type = "lowpass";
+      lpf.frequency.value = 700;
 
       osc.type = "sine";
       osc.frequency.value = freq;
-      osc.detune.value = d;
-      osc.connect(lpf); lpf.connect(gain); gain.connect(master);
+      osc.detune.value = detune;
+      osc.connect(lpf);
+      lpf.connect(gain);
+      gain.connect(master);
 
-      gain.gain.setValueAtTime(0, start);
-      gain.gain.linearRampToValueAtTime(vol, start + 1.2);
-      gain.gain.setValueAtTime(vol, start + dur - 1.2);
-      gain.gain.linearRampToValueAtTime(0, start + dur);
-      osc.start(start);
-      osc.stop(start + dur + 0.1);
-    });
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(vol, t + 1.0);
+      gain.gain.setValueAtTime(vol, t + dur - 1.0);
+      gain.gain.linearRampToValueAtTime(0, t + dur);
+      osc.start(t);
+      osc.stop(t + dur + 0.1);
+    }
   }
 
-  // Melody pattern — indices into scale array
-  const melody  = [7, 9, 7, 5, 3, 5, 7, 5, 3, 2, 0, 2, 3, 5, 7, 9];
-  const rhythm  = [0.6,0.4,0.6,0.8,0.6,0.4,0.8,0.6,0.6,0.4,0.8,0.6,0.6,0.4,0.8,1.2];
-  const total   = rhythm.reduce((a, b) => a + b, 0); // ~9.8s per phrase
+  // Melody: indices into scale, with timing in seconds
+  const melody  = [9, 11, 9, 7, 5, 7, 9, 7, 5, 4, 2, 4, 5, 7, 9, 11];
+  const rhythm  = [0.6, 0.4, 0.6, 0.8, 0.6, 0.4, 0.8, 0.6, 0.6, 0.4, 0.8, 0.6, 0.6, 0.4, 0.8, 1.2];
+  const phaseLen = rhythm.reduce((a, b) => a + b, 0); // ≈ 9.2s
 
-  function schedulePhraseAt(phraseStart: number) {
-    let t = phraseStart;
+  function schedulePhrase(start: number) {
+    let t = start;
     melody.forEach((si, i) => {
-      const f = scale[si];
-      tone(f,       t, rhythm[i] * 0.9, "triangle", 0.1);   // melody
-      tone(f * 2,   t, rhythm[i] * 0.5, "sine",     0.04);  // octave shimmer
-      if (i % 4 === 0) pad(f * 0.5, t, rhythm[i] * 3, 0.04); // bass pad
+      const f = scale[si % scale.length];
+      note(f, t, rhythm[i] * 0.85, 0.09);                        // main melody
+      note(f * 2, t + 0.02, rhythm[i] * 0.4, 0.025);             // octave shimmer
+      if (i % 3 === 0) pad(f * 0.5, t, rhythm[i] * 2.5, 0.035);  // bass pads
       t += rhythm[i];
     });
-    // Drone / bass under whole phrase
-    pad(scale[0], phraseStart, total * 0.9, 0.06);
-    pad(scale[2], phraseStart + total * 0.3, total * 0.6, 0.03);
+    // Harmonic pads under whole phrase
+    pad(scale[0],  start,              phaseLen * 0.95, 0.055);
+    pad(scale[2],  start + phaseLen * 0.25, phaseLen * 0.7,  0.03);
+    pad(scale[4],  start + phaseLen * 0.5,  phaseLen * 0.45, 0.025);
   }
 
-  // Schedule phrases to overlap slightly for seamless looping
-  const overlap = 1.5; // seconds of overlap
-  let phraseStart = ctx.currentTime + 0.1;
+  // Schedule phrases with 1.5s overlap so looping is seamless
+  let phraseStart = ctx.currentTime + 0.05;
+  let loopActive  = true;
 
   function loop() {
-    schedulePhraseAt(phraseStart);
-    phraseStart += total;
-    // Re-schedule just before phrase ends
-    const msUntilNext = (phraseStart - overlap - ctx.currentTime) * 1000;
-    setTimeout(loop, Math.max(msUntilNext, 100));
+    if (!loopActive) return;
+    schedulePhrase(phraseStart);
+    phraseStart += phaseLen;
+    const msUntilNext = (phraseStart - 1.5 - ctx.currentTime) * 1000;
+    setTimeout(loop, Math.max(msUntilNext, 50));
   }
 
   loop();
-  return ctx;
+
+  // Store stopper on the context object so MusicPlayer can clean up
+  (ctx as AudioContext & { _stopAmbient?: () => void })._stopAmbient = () => {
+    loopActive = false;
+    master.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.5);
+  };
 }
 
-// ── Component ──────────────────────────────────────────────────────────────
-interface Props { invitation: Invitation; isPreview?: boolean; }
+// ── Component ────────────────────────────────────────────────────────────────
+interface Props {
+  invitation:   Invitation;
+  isPreview?:   boolean;
+  unlockedCtx?: AudioContext | null; // pre-unlocked by envelope tap
+}
 
-export function MusicPlayer({ invitation, isPreview }: Props) {
-  const p = invitation.colorPalette as {
-    primary: string; secondary: string; background: string;
-  };
+export function MusicPlayer({ invitation, isPreview, unlockedCtx }: Props) {
+  const p         = invitation.colorPalette as { primary: string; secondary: string };
+  const primary   = p.primary   || "#C9A84C";
+  const secondary = p.secondary || "#1a1608";
 
   const ctxRef      = useRef<AudioContext | null>(null);
+  const startedRef  = useRef(false);
   const [playing,   setPlaying]   = useState(false);
   const [muted,     setMuted]     = useState(false);
   const [showLabel, setShowLabel] = useState(false);
-  const startedRef  = useRef(false);
 
-  // Start music on first user interaction (required by browsers)
+  // ── Start music as soon as component mounts with an unlocked context ──
   useEffect(() => {
-    if (isPreview) return;
+    if (isPreview || startedRef.current) return;
 
-    const start = () => {
-      if (startedRef.current) return;
+    const launch = (ctx: AudioContext) => {
       startedRef.current = true;
-
-      try {
-        ctxRef.current = buildAndStartEngine();
-        setPlaying(true);
-        setShowLabel(true);
-        setTimeout(() => setShowLabel(false), 3500);
-      } catch (e) {
-        console.warn("Web Audio failed:", e);
-      }
+      ctxRef.current     = ctx;
+      startAmbientMusic(ctx);
+      setPlaying(true);
+      setShowLabel(true);
+      setTimeout(() => setShowLabel(false), 4000);
     };
 
-    // Listen for any interaction
-    window.addEventListener("click",      start, { once: true });
-    window.addEventListener("touchstart", start, { once: true, passive: true });
-    window.addEventListener("keydown",    start, { once: true });
-
-    return () => {
-      window.removeEventListener("click",      start);
-      window.removeEventListener("touchstart", start);
-      window.removeEventListener("keydown",    start);
-    };
-  }, [isPreview]);
-
-  const toggle = () => {
-    const ctx = ctxRef.current;
-
-    // If not started yet, start now (direct button tap = user gesture)
-    if (!startedRef.current) {
-      startedRef.current = true;
-      try {
-        ctxRef.current = buildAndStartEngine();
-        setPlaying(true);
-        setShowLabel(true);
-        setTimeout(() => setShowLabel(false), 3500);
-      } catch (e) {
-        console.warn("Web Audio failed:", e);
-      }
+    // Case 1: envelope already tapped → context unlocked → start immediately
+    if (unlockedCtx) {
+      launch(unlockedCtx);
       return;
     }
 
-    if (!ctx) return;
+    // Case 2: no envelope (isPreview=false but no envelope used) → wait for tap
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
 
+    const onInteraction = () => {
+      if (startedRef.current) return;
+      try {
+        const ctx = new AudioCtx();
+        launch(ctx);
+      } catch { /* ignore */ }
+    };
+
+    window.addEventListener("click",      onInteraction, { once: true });
+    window.addEventListener("touchstart", onInteraction, { once: true, passive: true });
+    return () => {
+      window.removeEventListener("click",      onInteraction);
+      window.removeEventListener("touchstart", onInteraction);
+    };
+  }, [isPreview, unlockedCtx]);
+
+  // ── Cleanup on unmount ──
+  useEffect(() => {
+    return () => {
+      const ctx = ctxRef.current as (AudioContext & { _stopAmbient?: () => void }) | null;
+      ctx?._stopAmbient?.();
+    };
+  }, []);
+
+  const toggle = () => {
+    // If not started yet, try to start now (direct button tap = user gesture)
+    if (!startedRef.current) {
+      try {
+        const AudioCtx =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const ctx = new AudioCtx();
+        startedRef.current = true;
+        ctxRef.current     = ctx;
+        startAmbientMusic(ctx);
+        setPlaying(true);
+        setShowLabel(true);
+        setTimeout(() => setShowLabel(false), 4000);
+      } catch { /* ignore */ }
+      return;
+    }
+
+    const ctx = ctxRef.current;
+    if (!ctx) return;
     if (playing) {
       ctx.suspend().then(() => setPlaying(false));
     } else {
@@ -173,42 +212,26 @@ export function MusicPlayer({ invitation, isPreview }: Props) {
   const toggleMute = () => {
     const ctx = ctxRef.current;
     if (!ctx) return;
-    // Find the master gain node — suspend/resume approach is cleaner
-    // Since we can't easily access master gain from outside, use suspend
-    if (!muted) {
-      // "Mute" — set gain to 0 via a suspended context trick
-      // Simplest: just suspend but keep playing state visually
-      ctx.suspend();
-      setMuted(true);
-    } else {
-      ctx.resume();
-      setMuted(false);
-    }
+    if (!muted) { ctx.suspend(); setMuted(true); }
+    else        { ctx.resume();  setMuted(false); }
   };
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => { ctxRef.current?.close(); };
-  }, []);
 
   if (isPreview) return null;
 
   const label = invitation.musicLabel || "Ambient Oud · Mediterranean";
-  const primary = (p as { primary?: string }).primary || "#C9A84C";
-  const secondary = (p as { secondary?: string }).secondary || "#1a1608";
 
   return (
     <motion.div
       className="fixed bottom-5 right-5 z-50 flex items-center gap-2"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 1.5 }}>
+      transition={{ delay: 0.5 }}>
 
       {/* Now playing toast */}
       <AnimatePresence>
         {showLabel && (
           <motion.div
-            className="px-3 py-2 text-[11px] tracking-wide flex items-center gap-2 rounded-sm max-w-[160px]"
+            className="px-3 py-2 text-[11px] tracking-wide flex items-center gap-2 rounded-sm max-w-[180px]"
             style={{
               background: `${secondary}ee`,
               color: primary,
@@ -223,20 +246,16 @@ export function MusicPlayer({ invitation, isPreview }: Props) {
         )}
       </AnimatePresence>
 
-      {/* Equalizer bars */}
+      {/* Live equalizer bars */}
       {playing && !muted && (
         <div className="flex items-end gap-0.5 h-4">
-          {[3, 5, 4, 6, 3].map((h, i) => (
+          {[3, 5, 4, 7, 3, 5].map((h, i) => (
             <motion.div
               key={i}
               className="w-0.5 rounded-full"
               style={{ background: primary }}
-              animate={{ height: [2, h * 2, 2, h * 2.5, 2] }}
-              transition={{
-                duration: 0.6 + i * 0.1,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
+              animate={{ height: [2, h * 2, 2, h * 3, 2] }}
+              transition={{ duration: 0.5 + i * 0.12, repeat: Infinity, ease: "easeInOut" }}
             />
           ))}
         </div>
@@ -252,8 +271,7 @@ export function MusicPlayer({ invitation, isPreview }: Props) {
           color: primary,
         }}
         whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        title={playing ? "Pause music" : "Play music"}>
+        whileTap={{ scale: 0.95 }}>
         {playing && !muted ? <Pause size={14} /> : <Play size={14} />}
       </motion.button>
 
@@ -267,8 +285,7 @@ export function MusicPlayer({ invitation, isPreview }: Props) {
           color: muted ? `${primary}35` : primary,
         }}
         whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        title={muted ? "Unmute" : "Mute"}>
+        whileTap={{ scale: 0.95 }}>
         {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
       </motion.button>
     </motion.div>
