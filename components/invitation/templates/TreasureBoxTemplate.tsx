@@ -59,12 +59,14 @@ function FloatingPetals({ active }: { active: boolean }) {
 }
 
 // ── Music toggle ───────────────────────────────────────────────────────────
-function MusicButton({ audioRef, songLabel }: { audioRef: React.RefObject<HTMLAudioElement | null>; songLabel?: string }) {
+function MusicButton({ audioRef, songLabel, onPlay }: { audioRef: React.RefObject<HTMLAudioElement | null>; songLabel?: string; onPlay?: () => void }) {
   const [playing, setPlaying] = useState(false);
   const toggle = () => {
-    if (!audioRef.current) return;
-    if (playing) { audioRef.current.pause(); setPlaying(false); }
-    else { audioRef.current.play().catch(() => {}); setPlaying(true); }
+    if (onPlay && !playing) onPlay();
+    if (audioRef.current) {
+      if (playing) { audioRef.current.pause(); setPlaying(false); }
+      else { audioRef.current.play().catch(() => {}); setPlaying(true); }
+    }
   };
   return (
     <button onClick={toggle}

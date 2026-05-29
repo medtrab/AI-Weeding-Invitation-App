@@ -29,11 +29,37 @@ export const SUPPORTED_FONTS = [
   { label: "Raleway",            value: "Raleway",            category: "sans"  },
 ];
 
+// Music library — uses Web Audio synthesis as primary engine (always works)
+// External URLs are optional fallbacks if provided via invitation.musicUrl
 export const MUSIC_LIBRARY = [
-  { label: "Fairuz — Li Beirut",      url: "/music/fairuz-li-beirut.mp3",   genre: "Arabic"    },
-  { label: "Debussy — Clair de Lune", url: "/music/clair-de-lune.mp3",      genre: "Classical" },
-  { label: "Satie — Gymnopédie No.1", url: "/music/gymnopedie.mp3",         genre: "Classical" },
-  { label: "Norah Jones — Come Away", url: "/music/come-away.mp3",          genre: "Jazz"      },
-  { label: "Ambient Oud",             url: "/music/ambient-oud.mp3",        genre: "Arabic"    },
-  { label: "String Quartet",          url: "/music/string-quartet.mp3",     genre: "Classical" },
+  {
+    label: "Ambient Oud & Piano",
+    url: "",          // Uses Web Audio synthesis
+    genre: "Arabic · Ambient",
+    synthesized: true,
+  },
+  {
+    label: "Romantic Strings",
+    url: "https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3",
+    genre: "Classical · Romantic",
+    synthesized: false,
+  },
+  {
+    label: "Mediterranean Piano",
+    url: "https://assets.mixkit.co/music/preview/mixkit-dreaming-big-31.mp3",
+    genre: "Piano · Dreamy",
+    synthesized: false,
+  },
+  {
+    label: "Soft Wedding Waltz",
+    url: "https://assets.mixkit.co/music/preview/mixkit-a-very-happy-christmas-897.mp3",
+    genre: "Orchestral · Elegant",
+    synthesized: false,
+  },
+  {
+    label: "Oriental Breeze",
+    url: "https://assets.mixkit.co/music/preview/mixkit-sunset-in-the-desert-700.mp3",
+    genre: "Oriental · Warm",
+    synthesized: false,
+  },
 ];
