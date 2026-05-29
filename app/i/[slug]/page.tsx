@@ -2,12 +2,13 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db/client";
 import { InvitationRenderer } from "@/components/invitation/InvitationRenderer";
 import { SpecViewerPage } from "@/components/invitation/generated/SpecViewerPage";
+import { TreasureBoxTemplate } from "@/components/invitation/templates/TreasureBoxTemplate";
 import type { Metadata } from "next";
 import type { Invitation } from "@/types";
 
 interface Props {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ guest?: string }>;
+  searchParams: Promise<{ guest?: string; template?: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -19,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function InvitationViewerPage({ params, searchParams }: Props) {
   const { slug } = await params;
-  const { guest } = await searchParams;
+  const { guest, template } = await searchParams;
 
   const invitation = await db.invitation.findFirst({
     where: { slug, status: "published" },
@@ -30,7 +31,20 @@ export default async function InvitationViewerPage({ params, searchParams }: Pro
   const inv = JSON.parse(JSON.stringify(invitation)) as Invitation & { generatedHtml?: string };
   const guestName = guest ? decodeURIComponent(guest) : undefined;
 
-  // Check for spec-based design
+  // Template: treasure box (via ?template=treasure or animationStyle flag)
+  const isTreasure = template === "treasure" || inv.animationStyle === "treasure_box";
+  if (isTreasure) {
+    return (
+      <TreasureBoxTemplate
+        invitation={inv}
+        guestName={guestName}
+        songLabel={inv.musicLabel ?? undefined}
+        songUrl={inv.musicUrl ?? undefined}
+      />
+    );
+  }
+
+  // Spec-based design (AI generated)
   try {
     if (inv.generatedHtml) {
       const parsed = JSON.parse(inv.generatedHtml);

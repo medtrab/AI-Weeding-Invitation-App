@@ -9,6 +9,7 @@ const OPTIONS: { value: AnimationStyle; label: string; desc: string }[] = [
   { value:"parallax",        label:"Parallax Depth",  desc:"Layered scroll depth"         },
   { value:"confetti",        label:"Confetti Burst",  desc:"Joyful celebration burst"    },
   { value:"botanical",       label:"Botanical",       desc:"Organic leaf animations"      },
+  { value:"treasure_box",    label:"✦ Treasure Box",  desc:"Cinematic box → pigeon → reveal" },
 ];
 
 export function AnimationPicker() {

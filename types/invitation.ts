@@ -15,7 +15,8 @@ export type AnimationStyle =
   | "shimmer"
   | "parallax"
   | "confetti"
-  | "botanical";
+  | "botanical"
+  | "treasure_box";
 
 export interface ColorPalette {
   primary: string;
