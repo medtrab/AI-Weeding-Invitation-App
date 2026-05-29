@@ -64,7 +64,7 @@ export function NewInvitationModal({ isOpen, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
@@ -72,7 +72,7 @@ export function NewInvitationModal({ isOpen, onClose }: Props) {
       />
 
       {/* Panel */}
-      <div className="relative w-full max-w-lg bg-gradient-to-br from-[#1A160E] to-[#0D0B08] border border-gold/25 p-8 z-10">
+      <div className="relative w-full sm:max-w-lg bg-gradient-to-br from-[#1A160E] to-[#0D0B08] border border-gold/25 p-5 sm:p-8 z-10 max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-none">
         {/* Top gold line */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold to-transparent" />
 

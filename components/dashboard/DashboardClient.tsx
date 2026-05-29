@@ -21,9 +21,9 @@ export function DashboardClient({ invitations, stats, userName }: Props) {
 
   return (
     <DashboardLayout onNewInvitation={() => setShowModal(true)}>
-      <div className="p-8 max-w-6xl">
+      <div className="p-4 sm:p-8 max-w-6xl">
         {/* Header */}
-        <div className="mb-10">
+        <div className="mb-6 sm:mb-10">
           <h1 className="font-cormorant text-3xl font-light text-cream mb-1">
             Your Dashboard
           </h1>
@@ -33,7 +33,7 @@ export function DashboardClient({ invitations, stats, userName }: Props) {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-12">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-8 sm:mb-12">
           <StatCard label="Total Invitations" value={stats.total}      icon={BarChart2}   />
           <StatCard label="Published"          value={stats.published}  icon={Send}        />
           <StatCard label="Total RSVPs"        value={stats.rsvpCount}  icon={Users}       />

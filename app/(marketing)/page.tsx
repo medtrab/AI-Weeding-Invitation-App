@@ -85,7 +85,7 @@ function AIGenerator() {
 
   return (
     <section id="ai-gen" className="py-28 bg-gradient-to-b from-deep to-[#100E0A]">
-      <div className="max-w-3xl mx-auto px-6">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6">
         <motion.div className="text-center mb-14" initial={{ opacity:0, y:24 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }}>
           <p className="text-[11px] uppercase tracking-[0.35em] text-gold mb-4">AI Generator</p>
           <h2 className="font-cormorant text-[clamp(2.2rem,4vw,3.5rem)] font-light leading-tight">
@@ -118,7 +118,7 @@ function AIGenerator() {
 
         <AnimatePresence>
           {result && !loading && (
-            <motion.div className="mt-6 grid grid-cols-2 gap-3" initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0 }}>
+            <motion.div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3" initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0 }}>
               <ResultCell label="Theme Name">
                 <p className="font-cormorant text-xl font-light text-cream">{result.themeName}</p>
               </ResultCell>
@@ -178,7 +178,7 @@ function ResultCell({ label, children, className="" }: { label:string; children:
 function StatsBar() {
   return (
     <div className="border-t border-b border-gold/10 bg-gold/[0.03] py-10">
-      <div className="flex justify-center gap-12 flex-wrap max-w-3xl mx-auto px-6">
+      <div className="grid grid-cols-2 sm:flex sm:justify-center gap-6 sm:gap-12 flex-wrap max-w-3xl mx-auto px-6">
         {[
           { num:"24K+", label:"Invitations Created"  },
           { num:"98%",  label:"Guest Open Rate"       },
@@ -217,20 +217,22 @@ export default function LandingPage() {
   return (
     <div className="bg-deep text-cream min-h-screen">
       {/* Nav */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-4 backdrop-blur-xl bg-deep/70 border-b border-gold/10">
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 sm:px-8 py-3 sm:py-4 backdrop-blur-xl bg-deep/80 border-b border-gold/10">
         <span className="font-cormorant text-xl font-light tracking-[0.15em] text-gold uppercase">Invité</span>
         <div className="hidden md:flex gap-6 text-[11px] uppercase tracking-[0.15em]">
           {[["#ai-gen","Generator"],["#vibe","AI Themes"],["#themes","Templates"],["#features","Features"],["#pricing","Pricing"]].map(([href,label]) => (
             <a key={href} href={href} className="text-cream/50 hover:text-gold transition-colors">{label}</a>
           ))}
         </div>
-        <Link href="/login" className="px-5 py-2 border border-gold/40 text-gold text-[11px] uppercase tracking-[0.15em] hover:bg-gold hover:text-deep transition-all">
-          Sign In
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/login" className="px-4 py-2 border border-gold/40 text-gold text-[11px] uppercase tracking-[0.15em] hover:bg-gold hover:text-deep transition-all">
+            Sign In
+          </Link>
+        </div>
       </nav>
 
       {/* Hero */}
-      <section className="relative min-h-screen flex items-center justify-center text-center px-6 pt-24 pb-16 overflow-hidden">
+      <section className="relative min-h-screen min-h-[100dvh] flex items-center justify-center text-center px-4 sm:px-6 pt-20 sm:pt-24 pb-12 sm:pb-16 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-gold/[0.04] rounded-full blur-3xl" />
         </div>
@@ -272,7 +274,7 @@ export default function LandingPage() {
             <p className="text-[11px] uppercase tracking-[0.35em] text-gold mb-4">Theme Collection</p>
             <h2 className="font-cormorant text-[clamp(2.2rem,4vw,3.5rem)] font-light">Curated templates for<br /><em className="italic text-gold">every occasion</em></h2>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gold/15">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-px bg-gold/15">
             {[
               { name:"Al-Andalus Gold",bg:"from-[#1A1308] to-[#0D0B06]",text:"#F5E4B0",accent:"#C9A84C",sub:"Arabic · Luxury"  },
               { name:"Celestial Blue", bg:"from-[#0F1520] to-[#080A10]",text:"#E8F0FA",accent:"#7A9ACC",sub:"European · Minimal"},
@@ -309,7 +311,7 @@ export default function LandingPage() {
             <p className="text-[11px] uppercase tracking-[0.35em] text-gold mb-4">Platform Features</p>
             <h2 className="font-cormorant text-[clamp(2.2rem,4vw,3.5rem)] font-light">Everything you need,<br /><em className="italic text-gold">nothing less</em></h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-px bg-gold/10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-px bg-gold/10">
             {FEATURES.map((f, i) => (
               <motion.div key={f.title} className="bg-deep p-8 hover:bg-gold/[0.03] transition-colors"
                 initial={{ opacity:0, y:16 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} transition={{ delay:i*0.08 }}>
@@ -329,7 +331,7 @@ export default function LandingPage() {
             <p className="text-[11px] uppercase tracking-[0.35em] text-gold mb-4">Stories</p>
             <h2 className="font-cormorant text-[clamp(2.2rem,4vw,3.5rem)] font-light">Moments they'll<br /><em className="italic text-gold">remember</em></h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-px bg-gold/10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-px bg-gold/10">
             {[
               { q:"Our guests couldn't believe it was digital. The music started and people were genuinely moved — the most beautiful invitation they'd ever received.", name:"Yasmine Al-Hassan", event:"Wedding · Dubai 2024" },
               { q:"The AI generated our text in three languages perfectly. Family across France, Lebanon, and the UK all felt included. Our RSVP rate was 94%.",           name:"Pierre & Nour Lefèvre", event:"Wedding · Paris 2024" },
@@ -353,7 +355,7 @@ export default function LandingPage() {
             <p className="text-[11px] uppercase tracking-[0.35em] text-gold mb-4">Pricing</p>
             <h2 className="font-cormorant text-[clamp(2.2rem,4vw,3.5rem)] font-light">Simple, transparent<br /><em className="italic text-gold">pricing</em></h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-px bg-gold/15">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-gold/15">
             {PLANS.map((plan, i) => (
               <motion.div key={plan.name} className={`p-8 ${plan.featured ? "bg-gradient-to-b from-[#1A1608] to-[#141009]" : "bg-deep"}`}
                 initial={{ opacity:0, y:24 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} transition={{ delay:i*0.1 }}>
@@ -387,7 +389,7 @@ export default function LandingPage() {
             <p className="font-cormorant text-2xl font-light tracking-[0.2em] text-gold uppercase mb-1">Invité</p>
             <p className="text-[10px] uppercase tracking-[0.2em] text-cream/25">Craft moments. Create memories.</p>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
             {[
               { title:"Product", links:[["#ai-gen","AI Generator"],["#vibe","AI Themes"],["#themes","Templates"],["#pricing","Pricing"]] },
               { title:"Events",  links:[["#","Weddings"],["#","Engagements"],["#","Birthdays"],["#","Corporate"]] },

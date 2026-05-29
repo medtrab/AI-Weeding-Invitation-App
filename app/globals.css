@@ -44,3 +44,36 @@
 }
 
 .animate-loading-bar { animation: loadingBar 2s ease forwards; }
+
+/* ── Mobile viewport fix ── */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* ── Touch targets ── */
+@media (max-width: 768px) {
+  button, a[href], input, select, textarea {
+    min-height: 44px;
+  }
+  input[type="text"],
+  input[type="email"],
+  input[type="password"] {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+  }
+}
+
+/* ── Dashboard main content mobile ── */
+@media (max-width: 768px) {
+  .dashboard-content {
+    padding: 1rem;
+  }
+}
+
+/* ── Safe area (iPhone notch/home indicator) ── */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
