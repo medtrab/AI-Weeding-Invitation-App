@@ -173,7 +173,7 @@ export function HeroSection({ section, invitation }: Props): JSX.Element {
         </motion.div>
 
         {/* Names */}
-        {/* @ts-expect-error framer-motion JSX type in strict bundler mode */}
+
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
