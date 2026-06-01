@@ -53,7 +53,7 @@ Return ONLY valid JSON — no markdown, no explanation:
     {
       "type": "guest",
       "heading": "Guest greeting heading",
-      "message": "Personalized greeting message (use {{GUEST_NAME}} as placeholder)",
+      "message": "Personalized greeting message — use {{GUEST_NAME}} as the only placeholder for guest name. ONLY use {{GUEST_NAME}} in this field, never in heading or other fields.",
       "layout": "royal | elegant | warm"
     },
     {

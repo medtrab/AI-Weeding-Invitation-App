@@ -336,7 +336,7 @@ function MessageForm({ section, p, fh }: { section: Record<string, string>; p: P
       <p style={{ fontFamily: `'${fh}', serif`, fontSize: "1.6rem", fontWeight: 300, color: p.text }}>
         Thank you, {name}
       </p>
-      <p className="text-sm mt-2" style={{ color: p.textMuted ?? p.text, opacity: 0.5 }}>Your message has been received with love</p>
+      <p className="text-sm mt-2" style={{ color: p.textMuted ?? p.text, opacity: 0.5 }}>Your message has been received with love ♡</p>
     </motion.div>
   );
   return (
@@ -527,7 +527,7 @@ export function SpecRenderer({ spec, coupleName, eventDate, venue, guestName, ph
                     {section.heading && (
                       <div className="text-center mb-8">
                         <h2 style={{ fontFamily: `'${fh}', serif`, fontSize: "clamp(1.6rem, 4vw, 2.8rem)", fontWeight: 300, color: p.text, lineHeight: 1.2 }}>
-                          {section.heading}
+                          {String(section.heading || "").replace(/\{\{GUEST_NAME\}\}/g, guestName || "Dear Guest")}
                         </h2>
                         <Ornament color={p.primary} style={spec.decorations?.dividerStyle} />
                       </div>
@@ -550,7 +550,7 @@ export function SpecRenderer({ spec, coupleName, eventDate, venue, guestName, ph
                       <div className="max-w-xl mx-auto">
                         <div className="p-8 border text-center" style={{ borderColor: `${p.primary}20`, background: `${p.primary}06` }}>
                           <p style={{ fontFamily: `'${fh}', serif`, fontSize: "1.15rem", color: p.text, opacity: 0.8, lineHeight: 2 }}>
-                            {section.message}
+                            {section.message.replace(/\{\{GUEST_NAME\}\}/g, guestName || "Dear Guest")}
                           </p>
                           <div className="mt-6" style={{ color: p.primary, fontSize: "1.5rem", opacity: 0.5 }}>♥</div>
                         </div>
@@ -588,7 +588,7 @@ export function SpecRenderer({ spec, coupleName, eventDate, venue, guestName, ph
                         </p>
                         {section.venueDescription && (
                           <p className="text-sm leading-relaxed" style={{ color: p.text, opacity: 0.6, lineHeight: 1.8 }}>
-                            {section.venueDescription}
+                            {String(section.venueDescription || "").replace(/\{\{GUEST_NAME\}\}/g, guestName || "Dear Guest")}
                           </p>
                         )}
                         <div className="flex flex-wrap justify-center gap-3 mt-4">
