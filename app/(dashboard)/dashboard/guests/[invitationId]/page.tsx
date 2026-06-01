@@ -1,39 +1,33 @@
 import { redirect, notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/config";
-import { db } from "@/lib/db/client";
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
-import { RSVPTable } from "@/components/dashboard/RSVPTable";
-import Link from "next/link";
+import { getServerSession }   from "next-auth";
+import { authOptions }        from "@/lib/auth/config";
+import { db }                 from "@/lib/db/client";
+import { GuestDashboard }     from "@/components/dashboard/guests/GuestDashboard";
 
-interface Props {
-  params: Promise<{ invitationId: string }>;
+interface Props { params: Promise<{ invitationId: string }> }
+
+export async function generateMetadata({ params }: Props) {
+  const { invitationId } = await params;
+  const inv = await db.invitation.findUnique({ where: { id: invitationId }, select: { title: true, coupleName: true } });
+  return { title: `Guests · ${inv?.coupleName || inv?.title || "Invitation"}` };
 }
 
 export default async function GuestsPage({ params }: Props) {
   const { invitationId } = await params;
-
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
+  const userId = (session.user as { id: string }).id;
 
   const invitation = await db.invitation.findFirst({
-    where: { id: invitationId, userId: (session.user as { id: string }).id },
-    select: { id: true, title: true, coupleName: true },
+    where: { id: invitationId, userId },
+    include: {
+      guests: {
+        include: { analytics: { orderBy: { createdAt: "desc" }, take: 5 } },
+        orderBy: [{ isVip: "desc" }, { createdAt: "asc" }],
+      },
+    },
   });
   if (!invitation) notFound();
 
-  return (
-    <DashboardLayout>
-      <div className="p-8 max-w-5xl">
-        <div className="flex items-center gap-3 mb-8">
-          <Link href="/dashboard" className="text-cream/30 hover:text-cream/70 text-sm transition-colors">← Dashboard</Link>
-          <span className="text-cream/20">/</span>
-          <h1 className="font-cormorant text-3xl font-light text-cream">
-            {invitation.coupleName ?? invitation.title} — Guests
-          </h1>
-        </div>
-        <RSVPTable invitationId={invitationId} />
-      </div>
-    </DashboardLayout>
-  );
+  return <GuestDashboard invitation={JSON.parse(JSON.stringify(invitation))} />;
 }

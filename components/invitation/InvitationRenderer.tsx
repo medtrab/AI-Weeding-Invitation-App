@@ -31,9 +31,10 @@ interface Props {
   invitation: Invitation;
   guestName?: string;
   isPreview?: boolean;
+  trackingToken?: string;
 }
 
-export function InvitationRenderer({ invitation, guestName, isPreview = false }: Props) {
+export function InvitationRenderer({ invitation, guestName, isPreview = false, trackingToken: _trackingToken }: Props) {
   const [envelopeOpened, setEnvelopeOpened] = useState(isPreview);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const p = invitation.colorPalette;

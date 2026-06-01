@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
   LayoutDashboard, FileText, BarChart2,
-  Settings, LogOut, Plus, Crown, Menu, X,
+  Settings, LogOut, Plus, Crown, Menu, X, Users,
 } from "lucide-react";
 import { ToastContainer } from "@/components/ui/Toast";
 import { useState } from "react";

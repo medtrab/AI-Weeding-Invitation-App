@@ -7,8 +7,9 @@ import type { Invitation } from "@/types";
 interface Props {
   invitation: Invitation;
   guestName?: string;
-  songUrl?: string;    // direct audio URL
-  songLabel?: string;  // display name
+  songUrl?: string;
+  songLabel?: string;
+  trackingToken?: string;
 }
 
 type Scene = "box" | "pigeon" | "reveal" | "details" | "message";

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { MoreHorizontal, Edit2, Copy, Trash2, Share2, ExternalLink } from "lucide-react";
 import { useDeleteInvitation, useDuplicateInvitation } from "@/hooks/useInvitations";
@@ -60,6 +61,11 @@ export function InvitationCard({ invitation }: { invitation: Invitation }) {
               </button>
             </Link>
           )}
+          <Link href={`/dashboard/guests/${invitation.id}`} className="flex-1">
+            <button className="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] uppercase tracking-[0.15em] border border-gold/20 text-cream/50 hover:border-gold/50 hover:text-gold transition-all">
+              <Users size={11} /> Guests
+            </button>
+          </Link>
 
           {/* More menu */}
           <div className="relative">
