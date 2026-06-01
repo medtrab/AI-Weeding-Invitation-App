@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db/client";
 import { generateWithFallback, extractJSON } from "@/lib/ai/gemini";
 import { generateSceneImage, buildPollinationsUrl } from "@/lib/ai/imagen";
 
@@ -123,11 +124,44 @@ All section texts should be in the specified language (${language}).
       pollinationsUrl = buildPollinationsUrl(data.imagePrompt); // always works in browser
     }
 
+    // Save directly to DB so invitation page picks it up immediately
+    // Extract color palette from spec for invitation theming
+    const specTheme = (data as { theme?: { palette?: Record<string, string> } }).theme;
+    const palette = specTheme?.palette;
+
+    const generatedHtml = JSON.stringify({
+      __cinematic: true,
+      __spec:      true,
+      spec:        data,
+      imageData:   imageData       || null,
+      pollinationsUrl: pollinationsUrl || null,
+      imagePrompt: data.imagePrompt || null,
+    });
+
+    if (invitationId) {
+      await db.invitation.update({
+        where: { id: invitationId },
+        data: {
+          generatedHtml,
+          ...(palette ? {
+            colorPalette: {
+              background: palette.bg      || palette.background || "#0D0B08",
+              secondary:  palette.surface || palette.secondary  || "#1A1608",
+              primary:    palette.primary || "#C9A84C",
+              accent:     palette.accent  || "#E8C86A",
+              text:       palette.text    || "#FAF7F2",
+            },
+          } : {}),
+        },
+      }).catch((e: unknown) => console.warn("DB save failed:", e));
+    }
+
     return NextResponse.json({
       spec: data,
       imageData,
       pollinationsUrl,
       imagePrompt: data.imagePrompt,
+      generatedHtml,
       invitationId, coupleName, eventDate, venue, guestName,
     });
   } catch (err) {
