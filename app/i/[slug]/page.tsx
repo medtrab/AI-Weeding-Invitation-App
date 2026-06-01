@@ -110,14 +110,16 @@ export default async function InvitationViewerPage({ params, searchParams }: Pro
       
       // Cinematic template with AI-generated background image
       if (parsed.__cinematic) {
+        // imageUrl: use base64 from Imagen3, OR the Pollinations URL directly
+        // imagePrompt: only used as fallback if no URL at all
+        const bgImageUrl = parsed.imageData || parsed.pollinationsUrl || undefined;
         return (
           <>
             {token && <TrackingPixel token={token} event="opened" />}
             <CinematicTemplate
               invitation={inv}
               guestName={guestName}
-              imageUrl={parsed.imageData || undefined}
-              imagePrompt={parsed.pollinationsUrl ? undefined : parsed.imagePrompt}
+              imageUrl={bgImageUrl}
               trackingToken={token}
             />
           </>

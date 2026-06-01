@@ -1,69 +1,42 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// Image generation for wedding invitations
+// Uses Pollinations.ai Flux model (free, no API key, excellent quality)
+// Imagen 3 requires Vertex AI service account credentials (not API key)
 
-// Generate a cinematic scene image using Gemini Imagen 3
-// Returns base64 image data or null if unavailable
-export async function generateSceneImage(prompt: string): Promise<string | null> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
+export async function generateSceneImage(_prompt: string): Promise<string | null> {
+  // Imagen 3 via generativelanguage.googleapis.com is NOT supported with API keys
+  // It requires Vertex AI service account credentials
+  // Return null to trigger Pollinations fallback
+  return null;
+}
 
-  try {
-    // Use the Gemini REST API directly for Imagen 3
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instances: [{ prompt }],
-          parameters: {
-            sampleCount: 1,
-            aspectRatio: "9:16",   // Portrait for mobile invitation
-            personGeneration: "allow_adult",
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const err = await response.text();
-      console.warn("Imagen 3 error:", err.slice(0, 200));
-      return null;
-    }
-
-    const data = await response.json() as {
-      predictions?: Array<{ bytesBase64Encoded?: string; mimeType?: string }>
-    };
-    const img = data.predictions?.[0];
-    if (!img?.bytesBase64Encoded) return null;
-
-    return `data:${img.mimeType || "image/png"};base64,${img.bytesBase64Encoded}`;
-  } catch (err) {
-    console.warn("Image generation failed:", err instanceof Error ? err.message : err);
-    return null;
-  }
+// Build a Pollinations.ai URL for the given image prompt
+// This URL works as a direct <img src> in the browser
+export function buildPollinationsUrl(prompt: string): string {
+  const seed = Math.floor(Math.random() * 1000000);
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1080&height=1920&model=flux&nologo=true&enhance=true&seed=${seed}`;
 }
 
 // Generate an optimized image prompt from user's theme description
 export async function generateImagePrompt(themeDescription: string, coupleName: string): Promise<string> {
   const { generateWithFallback } = await import("./gemini");
 
-  const prompt = `You are a professional AI image prompt engineer specializing in wedding invitations.
-Convert this wedding theme description into a single optimized image generation prompt.
+  const prompt = `You are a professional AI image prompt engineer for wedding invitations.
+Convert this wedding theme into a vivid image generation prompt.
 
 Theme: ${themeDescription}
 Couple: ${coupleName}
 
-Requirements:
-- Portrait orientation (9:16 ratio)
-- Cinematic, high quality, detailed
-- No text, no words, no letters in the image
-- Focus on the visual scene, atmosphere, and mood
-- Include: lighting, atmosphere, color palette, art style
-- Maximum 150 words
-- End with: "masterpiece, highly detailed, cinematic lighting, 8k, beautiful"
+Rules:
+- NO text, NO words, NO letters anywhere in the image
+- Portrait orientation (9:16)
+- Describe: setting, lighting, atmosphere, mood, colors, art style
+- Be specific and vivid (e.g. "golden lanterns reflecting on still water", "cherry blossoms drifting past stone temple gates at dusk")
+- Art style: anime cinematic / oil painting / watercolor / photorealistic (pick what fits)
+- End with: "masterpiece, ultra-detailed, cinematic composition, beautiful, emotional, romantic"
+- Maximum 120 words
 
-Return ONLY the image prompt, nothing else.`;
+Return ONLY the image prompt text.`;
 
-  const result = await generateWithFallback(prompt, { temperature: 0.8 });
+  const result = await generateWithFallback(prompt, { temperature: 0.9 });
   return result.trim();
 }

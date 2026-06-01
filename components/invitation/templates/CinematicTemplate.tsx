@@ -63,10 +63,17 @@ function CoverScene({ invitation, guestName, bgImage, onOpen, spec }: {
       onClick={handleTap}
       style={{ background: bgImage ? "transparent" : `linear-gradient(135deg, ${p.bg} 0%, #050402 100%)` }}>
 
-      {/* Background image */}
+      {/* Background image — handles both base64 and slow Pollinations URLs */}
       {bgImage && (
         <div className="absolute inset-0">
-          <img src={bgImage} alt="" className="w-full h-full object-cover" style={{ filter: "brightness(0.55) saturate(1.3)" }} />
+          <img
+            src={bgImage}
+            alt=""
+            className="w-full h-full object-cover transition-opacity duration-1000"
+            style={{ filter: "brightness(0.55) saturate(1.3)" }}
+            onLoad={e => { (e.target as HTMLImageElement).style.opacity = "1"; }}
+            onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
           <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, transparent 30%, ${p.bg}99 70%, ${p.bg} 100%)` }} />
         </div>
       )}
@@ -336,13 +343,11 @@ export function CinematicTemplate({ invitation, guestName, imageUrl, imagePrompt
   const [spec, setSpec] = useState<InvitationSpec>(DEFAULT_SPEC);
   const audioRef = useRef<AudioContext | null>(null);
 
-  // Load bg from Pollinations if no direct imageUrl
+  // imageUrl is either base64 (instant) or Pollinations URL (loads in ~5-15s)
+  // Both work as <img src> — browser handles the loading
   useEffect(() => {
-    if (!bgImage && imagePrompt) {
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt)}?width=1080&height=1920&model=flux&nologo=true&enhance=true`;
-      setBgImage(url);
-    }
-  }, [imagePrompt, bgImage]);
+    if (imageUrl && !bgImage) setBgImage(imageUrl);
+  }, [imageUrl, bgImage]);
 
   // Parse invitation color palette into spec
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateWithFallback, extractJSON } from "@/lib/ai/gemini";
-import { generateSceneImage } from "@/lib/ai/imagen";
+import { generateSceneImage, buildPollinationsUrl } from "@/lib/ai/imagen";
 
 const SPEC_PROMPT = `You are a world-class wedding invitation creative director and visual artist.
 The user describes a wedding theme. You return a JSON spec for a cinematic invitation.
@@ -113,18 +113,14 @@ All section texts should be in the specified language (${language}).
     const raw  = await generateWithFallback(`${SPEC_PROMPT}\n\n${userPrompt}`, { temperature: 1.0 });
     const data = extractJSON(raw) as { imagePrompt?: string; [key: string]: unknown };
 
-    // Generate background image from AI-crafted image prompt
+    // Generate background image URL using Pollinations.ai Flux model
+    // (Imagen 3 requires Vertex AI service account, not API key)
     let imageData: string | null = null;
     let pollinationsUrl: string | null = null;
 
     if (data.imagePrompt) {
-      // Try Imagen 3 (best quality, requires billing-enabled Google Cloud)
-      imageData = await generateSceneImage(data.imagePrompt);
-
-      if (!imageData) {
-        // Free fallback: Pollinations.ai — loads in browser
-        pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(data.imagePrompt)}?width=1080&height=1920&model=flux&nologo=true&enhance=true&seed=${Date.now()}`;
-      }
+      imageData = await generateSceneImage(data.imagePrompt); // returns null (Vertex AI needed)
+      pollinationsUrl = buildPollinationsUrl(data.imagePrompt); // always works in browser
     }
 
     return NextResponse.json({
