@@ -1,96 +1,85 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateWithFallback, extractJSON } from "@/lib/ai/gemini";
+import { generateSceneImage } from "@/lib/ai/imagen";
 
-const SPEC_PROMPT = `You are a luxury wedding invitation creative director.
-The user describes a wedding. You return a JSON design specification.
-The spec drives a rich React component that renders a truly unique invitation.
+const SPEC_PROMPT = `You are a world-class wedding invitation creative director and visual artist.
+The user describes a wedding theme. You return a JSON spec for a cinematic invitation.
+Think: Makoto Shinkai films, Studio Ghibli atmosphere, luxury editorial design.
+Be ULTRA specific about colors, fonts, atmosphere. Make every detail intentional.
 
-Return ONLY valid JSON — no markdown, no explanation:
+Return ONLY valid JSON:
 
 {
   "theme": {
-    "name": "Theme name",
+    "name": "Evocative theme name (e.g. Sakura Shinobi, Saharan Gold, Midnight Jasmine)",
     "palette": {
-      "bg": "#hex — deep rich background",
-      "surface": "#hex — slightly lighter surface",
-      "primary": "#hex — main accent (gold, jewel tone)",
-      "accent": "#hex — secondary accent",
-      "text": "#hex — main text color",
-      "textMuted": "#hex — muted text"
+      "bg": "#hex — deep atmospheric background matching the scene",
+      "surface": "#hex — slightly lighter, for cards/overlays",
+      "primary": "#hex — hero accent color (gold, jade, crimson, etc.)",
+      "accent": "#hex — secondary color for highlights",
+      "text": "#hex — main text (usually near-white or warm cream)",
+      "textMuted": "#hex — subtle text"
     },
-    "fontHeading": "Google Font for headings (e.g. Amiri, Cormorant Garamond, Scheherazade New)",
-    "fontBody": "Google Font for body (e.g. Jost, Raleway, DM Sans)",
+    "fontHeading": "Most fitting Google Font for the theme (e.g. Amiri, Cinzel, Noto Serif JP, Playfair Display, Scheherazade New, Dancing Script)",
+    "fontBody": "Clean readable Google Font (e.g. Jost, Raleway, Nunito, DM Sans)",
     "direction": "ltr or rtl",
-    "patternStyle": "arabesque | mosaic | floral | geometric | minimal | calligraphy"
+    "patternStyle": "arabesque | sakura | stars | geometric | floral | calligraphy | celestial | bamboo | wave"
+  },
+  "imagePrompt": "A highly detailed cinematic scene for an AI image generator. No text, no words. Ultra-detailed description: scene setting, lighting (golden hour / moonlight / lanterns), atmosphere, characters if any (from behind, no faces), specific visual elements matching the theme, color palette, art style (anime cinematic / oil painting / watercolor / etc). End with: masterpiece, highly detailed, cinematic composition, 8k quality, emotional and romantic atmosphere",
+  "coverSpec": {
+    "topSymbol": "Most fitting emoji or symbol for the theme (e.g. 🍒 🌙 ⚔️ 🌸 🕌 ✦ 🏮 🌺)",
+    "petalEmoji": "Floating particle emoji matching theme (e.g. 🌸 ❄️ 🍂 ✨ 🌟 💫 🌺)",
+    "tagline": "Short poetic invitation line (max 8 words, theme-specific)",
+    "storyLabel": "Label for story section (e.g. Our Journey, The Mission, Our Path)",
+    "storyEmoji": "Story section emoji (e.g. ♥ ⚔️ 🌙 🌸)",
+    "storyText": "2-3 sentences of romantic poetic story about the couple, deeply inspired by the theme. No {{GUEST_NAME}}.",
+    "detailsLabel": "Label for details section (e.g. The Ceremony, The Mission Briefing, The Grand Celebration)",
+    "venueIcon": "Emoji for venue that fits theme (e.g. 🏯 🕌 🌴 ⛩️ 🏰 🌹)",
+    "messageEmoji": "Message section emoji",
+    "messageTitle": "Title for message section (e.g. Leave a Wish, Your Blessing, Send Your Love)",
+    "thankEmoji": "Thank you emoji"
   },
   "envelope": {
-    "sealSymbol": "Unicode symbol for wax seal (e.g. ✦ ❋ ✿ ❁ ☽)",
-    "sealColor": "#hex",
-    "liningPattern": "arabesque | floral | geometric | plain",
-    "openingEffect": "jasmine | petals | sparkles | birds | leaves"
+    "sealSymbol": "Theme-appropriate seal symbol",
+    "sealColor": "#hex matching primary",
+    "openingEffect": "cherry_blossoms | gold_sparks | stars | rose_petals | fireflies | snow | leaves"
   },
   "sections": [
     {
       "type": "hero",
-      "layout": "cinematic | split | centered | fullbleed | arch",
-      "heading": "Main heading text",
-      "subheading": "Subheading text",
-      "quote": "Optional poetic quote",
-      "animation": "fadeIn | slideUp | typewriter | reveal | float"
-    },
-    {
-      "type": "countdown",
-      "style": "sandclock | arabic_numbers | ornamental | minimal | candles",
-      "label": "Label above countdown",
-      "datetime": "ISO date string"
+      "layout": "cinematic",
+      "heading": "Main heading — couple names or theme title",
+      "subheading": "Date line or venue teaser",
+      "quote": "Poetic quote deeply inspired by the theme (2 lines max)",
+      "animation": "fadeIn"
     },
     {
       "type": "welcome",
-      "heading": "Welcome heading",
-      "message": "Warm welcoming message from couple to guests (2-3 sentences)",
-      "layout": "centered | card | scroll"
+      "heading": "Welcome heading in theme language",
+      "message": "Warm 2-3 sentence welcome from couple to guests. Theme-specific language. No {{GUEST_NAME}}."
     },
     {
       "type": "guest",
-      "heading": "Guest greeting heading",
-      "message": "Personalized greeting message — use {{GUEST_NAME}} as the only placeholder for guest name. ONLY use {{GUEST_NAME}} in this field, never in heading or other fields.",
-      "layout": "royal | elegant | warm"
+      "heading": "Personal greeting heading",
+      "message": "Personal message to {{GUEST_NAME}} — use exactly this placeholder once."
     },
     {
       "type": "venue",
       "heading": "Venue section heading",
-      "venueName": "Venue name",
-      "venueDescription": "2 sentences describing the venue atmosphere",
+      "venueName": "Venue display name",
+      "venueDescription": "1-2 sentences describing the venue atmosphere in the theme's language",
       "time": "Event time",
-      "dresscode": "Dress code if any",
-      "mapStyle": "card | elegant | minimal"
+      "dresscode": "Optional dress code suggestion matching theme (e.g. Traditional Japanese, White & Gold, Ninja-inspired elegance)"
     },
     {
       "type": "message",
-      "heading": "Leave a message heading",
-      "placeholder": "Message input placeholder text",
-      "submitLabel": "Submit button text"
+      "heading": "Message section heading",
+      "placeholder": "Placeholder text for message input, theme-specific",
+      "submitLabel": "Submit button text, theme-specific (e.g. Send with Love ♡, Deliver the Scroll, Cast the Spell)"
     }
-  ],
-  "decorations": {
-    "floatingElements": ["element1", "element2", "element3"],
-    "borderStyle": "arabesque | floral | geometric | arch | none",
-    "dividerStyle": "ornate | simple | floral | calligraphy",
-    "backgroundPattern": "Description of the CSS pattern to use"
-  },
-  "music": {
-    "genre": "Oriental oud | Andalusian | Classical Arabic | Tunisian malouf | French romantic | Piano",
-    "mood": "romantic | festive | peaceful | majestic",
-    "autoplay": true
-  },
-  "openingEffect": {
-    "type": "envelope",
-    "particleType": "jasmine | rose | confetti | sparkles | leaves",
-    "particleCount": 30,
-    "particleEmoji": "✿",
-    "particleColors": ["#fff", "#f5e6c8", "#c9a84c"]
-  }
-}`;
+  ]
+}`;`;
+`;
 
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
@@ -122,8 +111,29 @@ All section texts should be in the specified language (${language}).
 
   try {
     const raw  = await generateWithFallback(`${SPEC_PROMPT}\n\n${userPrompt}`, { temperature: 1.0 });
-    const spec = extractJSON(raw);
-    return NextResponse.json({ spec, invitationId, coupleName, eventDate, venue, guestName });
+    const data = extractJSON(raw) as { imagePrompt?: string; [key: string]: unknown };
+
+    // Generate background image from AI-crafted image prompt
+    let imageData: string | null = null;
+    let pollinationsUrl: string | null = null;
+
+    if (data.imagePrompt) {
+      // Try Imagen 3 (best quality, requires billing-enabled Google Cloud)
+      imageData = await generateSceneImage(data.imagePrompt);
+
+      if (!imageData) {
+        // Free fallback: Pollinations.ai — loads in browser
+        pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(data.imagePrompt)}?width=1080&height=1920&model=flux&nologo=true&enhance=true&seed=${Date.now()}`;
+      }
+    }
+
+    return NextResponse.json({
+      spec: data,
+      imageData,
+      pollinationsUrl,
+      imagePrompt: data.imagePrompt,
+      invitationId, coupleName, eventDate, venue, guestName,
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Design generation failed";
     return NextResponse.json({ detail: msg }, { status: 500 });

@@ -56,6 +56,8 @@ export function AIDesignStudio({ invitationId, coupleName, eventDate, venue }: P
   const [loading, setLoading]     = useState(false);
   const [stepIdx, setStepIdx]     = useState(0);
   const [spec, setSpec]           = useState<Record<string, unknown> | null>(null);
+  const [bgImage, setBgImage]       = useState<string | null>(null);
+  const [imagePrompt, setImagePrompt] = useState<string | null>(null);
   const [error, setError]         = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -87,10 +89,31 @@ export function AIDesignStudio({ invitationId, coupleName, eventDate, venue }: P
       let data: { spec?: Record<string, unknown>; detail?: string };
       try { data = JSON.parse(text); } catch { throw new Error("Empty response — try again"); }
       if (!res.ok) throw new Error(data.detail ?? "Failed");
-      if (!data.spec) throw new Error("No design received");
-      setSpec(data.spec);
-      // Save spec to invitation store for persistence
-      updateField("generatedHtml" as never, JSON.stringify({ __spec: true, spec: data.spec, photos }) as never);
+      const fullData = data as {
+        spec?: Record<string, unknown>;
+        imageData?: string;
+        pollinationsUrl?: string;
+        imagePrompt?: string;
+        detail?: string;
+      };
+      if (!fullData.spec) throw new Error("No design received");
+      setSpec(fullData.spec);
+      
+      // Handle background image
+      const imgSrc = fullData.imageData || fullData.pollinationsUrl || null;
+      setBgImage(imgSrc);
+      setImagePrompt(fullData.imagePrompt || null);
+
+      // Save cinematic spec with image data to invitation
+      updateField("generatedHtml" as never, JSON.stringify({
+        __cinematic: true,
+        __spec: true,
+        spec: fullData.spec,
+        imageData:       fullData.imageData       || null,
+        pollinationsUrl: fullData.pollinationsUrl || null,
+        imagePrompt:     fullData.imagePrompt     || null,
+        photos,
+      }) as never);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -202,6 +225,27 @@ export function AIDesignStudio({ invitationId, coupleName, eventDate, venue }: P
           <button onClick={generate} className="ml-auto flex items-center gap-1 hover:text-red-300 shrink-0">
             <RefreshCw size={10} /> Retry
           </button>
+        </div>
+      )}
+
+      {/* Background image preview */}
+      {bgImage && !loading && (
+        <div className="mt-4 relative overflow-hidden rounded-sm border border-gold/20" style={{ height: 200 }}>
+          <img src={bgImage} alt="Generated scene" className="w-full h-full object-cover object-top"
+            style={{ filter: "brightness(0.8)" }}
+            onError={() => setBgImage(null)} />
+          <div className="absolute inset-0 flex items-end p-3"
+            style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)" }}>
+            <p className="text-[10px] text-white/60 uppercase tracking-[0.15em]">
+              {imagePrompt ? "✦ AI Generated Scene" : "🎨 Generating scene..."}
+            </p>
+          </div>
+        </div>
+      )}
+      {spec && !loading && imagePrompt && !bgImage && (
+        <div className="mt-4 p-3 bg-gold/5 border border-gold/15 text-[10px] text-cream/40 leading-relaxed">
+          <p className="text-gold/60 mb-1">🎨 Scene prompt generated — loading image…</p>
+          <p className="truncate">{imagePrompt.slice(0, 100)}…</p>
         </div>
       )}
 

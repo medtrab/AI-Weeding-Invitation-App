@@ -2,7 +2,8 @@ import { notFound }    from "next/navigation";
 import { db }          from "@/lib/db/client";
 import { InvitationRenderer }  from "@/components/invitation/InvitationRenderer";
 import { SpecViewerPage }      from "@/components/invitation/generated/SpecViewerPage";
-import { TreasureBoxTemplate } from "@/components/invitation/templates/TreasureBoxTemplate";
+import { TreasureBoxTemplate }  from "@/components/invitation/templates/TreasureBoxTemplate";
+import { CinematicTemplate }    from "@/components/invitation/templates/CinematicTemplate";
 import type { Metadata }  from "next";
 import type { Invitation } from "@/types";
 
@@ -106,6 +107,23 @@ export default async function InvitationViewerPage({ params, searchParams }: Pro
   try {
     if (inv.generatedHtml) {
       const parsed = JSON.parse(inv.generatedHtml);
+      
+      // Cinematic template with AI-generated background image
+      if (parsed.__cinematic) {
+        return (
+          <>
+            {token && <TrackingPixel token={token} event="opened" />}
+            <CinematicTemplate
+              invitation={inv}
+              guestName={guestName}
+              imageUrl={parsed.imageData || undefined}
+              imagePrompt={parsed.pollinationsUrl ? undefined : parsed.imagePrompt}
+              trackingToken={token}
+            />
+          </>
+        );
+      }
+      
       if (parsed.__spec) {
         return (
           <>
