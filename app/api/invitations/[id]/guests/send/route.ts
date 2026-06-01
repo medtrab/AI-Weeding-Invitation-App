@@ -19,51 +19,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const guests = await db.guest.findMany({
     where: { id: { in: guestIds }, invitationId: id },
-  });
-
-  // Always derive base URL from request headers — never trust NEXTAUTH_URL
-  // (it may be set to localhost in env vars, which would break production links)
-  const host  = req.headers.get("host") || "";
-  const proto = req.headers.get("x-forwarded-proto") || "https";
-  const baseUrl = `${proto}://${host}`;
-
-  const results = guests.map((guest: { id: string; name: string; phone: string | null; token: string }) => {
-    // Personalized link with guest token
-    const inviteUrl = `${baseUrl}/i/${inv.slug}?g=${guest.token}`;
-
-    // OG preview image URL (dynamic per guest)
-    const ogUrl = `${baseUrl}/api/og/${guest.token}`;
-
-    // WhatsApp message
-    const coupleName = inv.coupleName || inv.title;
-    const date = new Date(inv.eventDate).toLocaleDateString("en-US", {
-      weekday: "long", day: "numeric", month: "long",
-    });
-    const message = [
-      `✨ *${guest.name}*, you are cordially invited`,
-      ``,
-      `*${coupleName}*`,
-      `🗓 ${date}`,
-      `📍 ${inv.venue}`,
-      ``,
-      `Open your personal invitation:`,
-      inviteUrl,
-      ``,
-      `_A magical evening awaits you_ 🌸`,
-    ].join("\n");
-
-    const whatsappUrl = guest.phone
-      ? `https://wa.me/${guest.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`
-      : null;
-
-    return {
-      guestId:    guest.id,
-      guestName:  guest.name,
-      inviteUrl,
-      ogUrl,
-      whatsappUrl,
-      message,
-    };
+    select: { id: true, name: true, phone: true, token: true },
   });
 
   // Mark as sent
@@ -72,5 +28,17 @@ export async function POST(req: NextRequest, { params }: Params) {
     data: { sendStatus: "sent", sentAt: new Date() },
   });
 
-  return NextResponse.json({ results });
+  // Return ONLY raw data — client builds all URLs using window.location.origin
+  return NextResponse.json({
+    invitationSlug: inv.slug,
+    coupleName:     inv.coupleName || inv.title,
+    venue:          inv.venue,
+    eventDate:      inv.eventDate,
+    guests: guests.map((g: { id: string; name: string; phone: string | null; token: string }) => ({
+      id:    g.id,
+      name:  g.name,
+      phone: g.phone,
+      token: g.token,
+    })),
+  });
 }

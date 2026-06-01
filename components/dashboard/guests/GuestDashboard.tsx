@@ -320,8 +320,10 @@ function SendPanel({ invitation, guests, selected, onClose }: {
   selected: string[]; onClose: () => void;
 }) {
   const [loading, setLoading]   = useState(false);
-  const [results, setResults]   = useState<Array<{ guestName: string; whatsappUrl: string | null; message: string }>>([]);
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+  const [results, setResults] = useState<Array<{
+    guestName: string; phone: string | null;
+    inviteUrl: string; whatsappUrl: string | null; message: string;
+  }>>([]);
 
   const send = async () => {
     setLoading(true);
@@ -332,31 +334,40 @@ function SendPanel({ invitation, guests, selected, onClose }: {
     });
     const data = await res.json();
 
-    // Rebuild all URLs using window.location.origin (always correct on client)
-    const origin = window.location.origin;
-    const fixedResults = (data.results || []).map((r: { guestName: string; inviteUrl: string; message: string; whatsappUrl: string | null; guestId: string }) => {
-      // Replace whatever base URL the server used with the real client origin
-      const fixUrl = (url: string) => url.replace(/^https?:\/\/[^/]+/, origin);
-      const inviteUrl  = fixUrl(r.inviteUrl);
-      const coupleName = invitation.coupleName || invitation.title;
-      const message = [
-        `✨ *${r.guestName}*, you are cordially invited`,
+    // Build ALL URLs client-side using window.location.origin — always correct
+    const origin     = window.location.origin;
+    const slug       = data.invitationSlug || invitation.slug;
+    const couple     = data.coupleName     || invitation.coupleName || invitation.title;
+    const venue      = data.venue          || invitation.venue;
+    const eventDate  = data.eventDate;
+    const dateStr    = eventDate
+      ? new Date(eventDate).toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long" })
+      : "";
+
+    const built = (data.guests || []).map((g: { id: string; name: string; phone: string | null; token: string }) => {
+      const inviteUrl = `${origin}/i/${slug}?g=${g.token}`;
+      const message   = [
+        `✨ *${g.name}*, you are cordially invited`,
         ``,
-        `*${coupleName}*`,
-        `📍 ${invitation.venue}`,
+        `*${couple}*`,
+        dateStr ? `🗓 ${dateStr}` : null,
+        `📍 ${venue}`,
         ``,
         `Open your personal invitation:`,
         inviteUrl,
         ``,
         `_A magical evening awaits you_ 🌸`,
-      ].join("\n");
-      const whatsappUrl = r.whatsappUrl
-        ? `https://wa.me/${r.whatsappUrl.split("wa.me/")[1]?.split("?")[0]}?text=${encodeURIComponent(message)}`
+      ].filter(l => l !== null).join("\n");
+
+      const phone       = g.phone?.replace(/\D/g, "") || "";
+      const whatsappUrl = phone
+        ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
         : null;
-      return { ...r, inviteUrl, message, whatsappUrl };
+
+      return { guestName: g.name, phone: g.phone, inviteUrl, whatsappUrl, message };
     });
 
-    setResults(fixedResults);
+    setResults(built);
     setLoading(false);
   };
 
@@ -408,9 +419,9 @@ function SendPanel({ invitation, guests, selected, onClose }: {
                   <div>
                     <p className="text-[10px] text-cream/30 mb-1">No phone — copy link:</p>
                     <div className="flex gap-2">
-                      <input readOnly value={`${baseUrl}/i/${invitation.slug}?g=${guests.find(g=>g.name===r.guestName)?.token}`}
+                      <input readOnly value={r.inviteUrl}
                         className="flex-1 bg-gold/[0.04] border border-gold/15 text-xs text-cream/40 px-2 py-1.5 outline-none font-mono" />
-                      <button onClick={() => navigator.clipboard.writeText(`${baseUrl}/i/${invitation.slug}?g=${guests.find(g=>g.name===r.guestName)?.token || ""}`)}
+                      <button onClick={() => navigator.clipboard.writeText(r.inviteUrl)}
                         className="px-2 py-1.5 bg-gold/15 text-gold text-xs hover:bg-gold/25 transition-colors">Copy</button>
                     </div>
                   </div>
