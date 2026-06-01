@@ -44,9 +44,10 @@ function GuestRow({ guest, invitationSlug, baseUrl, onDelete, onSend }: {
   onSend: (guest: Guest) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const opened  = guest.analytics.some(a => a.event === "opened");
-  const rsvped  = guest.analytics.some(a => a.event === "rsvp_clicked");
-  const musical = guest.analytics.some(a => a.event === "music_played");
+  const events  = guest.analytics ?? [];
+  const opened  = events.some(a => a.event === "opened");
+  const rsvped  = events.some(a => a.event === "rsvp_clicked");
+  const musical = events.some(a => a.event === "music_played");
   const inviteUrl = `${baseUrl}/i/${invitationSlug}?g=${guest.token}`;
 
   const statusColor = {
@@ -142,11 +143,11 @@ function GuestRow({ guest, invitationSlug, baseUrl, onDelete, onSend }: {
                 </a>
               </div>
             </div>
-            {guest.analytics.length > 0 && (
+            {(guest.analytics?.length ?? 0) > 0 && (
               <div>
                 <p className="text-[10px] uppercase tracking-[0.15em] text-gold/50 mb-1">Recent Activity</p>
                 <div className="space-y-1">
-                  {guest.analytics.slice(0, 4).map(a => (
+                  {(guest.analytics ?? []).slice(0, 4).map(a => (
                     <div key={a.id} className="flex items-center gap-2 text-xs text-cream/30">
                       <span className="w-1.5 h-1.5 rounded-full bg-gold/40" />
                       <span className="capitalize">{a.event.replace(/_/g, " ")}</span>
@@ -222,13 +223,13 @@ function AddGuestModal({ invitationId, onClose, onAdded }: {
               </select>
             </div>
             <div className="flex flex-col justify-end">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <div onClick={() => setIsVip(!isVip)}
-                  className={`w-10 h-6 rounded-full transition-colors relative ${isVip ? "bg-gold" : "bg-cream/10"}`}>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setIsVip(!isVip)}
+                  className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${isVip ? "bg-gold" : "bg-cream/10"}`}>
                   <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${isVip ? "left-5" : "left-1"}`} />
-                </div>
+                </button>
                 <span className="text-xs text-cream/60">VIP Guest</span>
-              </label>
+              </div>
             </div>
           </div>
         </div>
@@ -424,7 +425,7 @@ export function GuestDashboard({ invitation }: { invitation: Invitation & { gues
     const matchFilter = filter === "all"    ? true
                       : filter === "sent"   ? g.sendStatus === "sent"
                       : filter === "pending"? g.sendStatus === "pending"
-                      : filter === "opened" ? g.analytics.some(a => a.event === "opened")
+                      : filter === "opened" ? (g.analytics ?? []).some(a => a.event === "opened")
                       : true;
     return matchSearch && matchFilter;
   });
@@ -441,7 +442,7 @@ export function GuestDashboard({ invitation }: { invitation: Invitation & { gues
     setSelected(s => s.filter(x => x !== id));
   };
 
-  const addGuest = (g: Guest) => setGuests(gs => [g, ...gs]);
+  const addGuest = (g: Guest) => setGuests(gs => [{ ...g, analytics: g.analytics ?? [] }, ...gs]);
 
   // Export CSV
   const exportCsv = () => {
