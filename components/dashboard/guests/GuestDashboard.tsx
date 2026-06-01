@@ -331,7 +331,32 @@ function SendPanel({ invitation, guests, selected, onClose }: {
       body: JSON.stringify({ guestIds: selected }),
     });
     const data = await res.json();
-    setResults(data.results);
+
+    // Rebuild all URLs using window.location.origin (always correct on client)
+    const origin = window.location.origin;
+    const fixedResults = (data.results || []).map((r: { guestName: string; inviteUrl: string; message: string; whatsappUrl: string | null; guestId: string }) => {
+      // Replace whatever base URL the server used with the real client origin
+      const fixUrl = (url: string) => url.replace(/^https?:\/\/[^/]+/, origin);
+      const inviteUrl  = fixUrl(r.inviteUrl);
+      const coupleName = invitation.coupleName || invitation.title;
+      const message = [
+        `✨ *${r.guestName}*, you are cordially invited`,
+        ``,
+        `*${coupleName}*`,
+        `📍 ${invitation.venue}`,
+        ``,
+        `Open your personal invitation:`,
+        inviteUrl,
+        ``,
+        `_A magical evening awaits you_ 🌸`,
+      ].join("\n");
+      const whatsappUrl = r.whatsappUrl
+        ? `https://wa.me/${r.whatsappUrl.split("wa.me/")[1]?.split("?")[0]}?text=${encodeURIComponent(message)}`
+        : null;
+      return { ...r, inviteUrl, message, whatsappUrl };
+    });
+
+    setResults(fixedResults);
     setLoading(false);
   };
 
