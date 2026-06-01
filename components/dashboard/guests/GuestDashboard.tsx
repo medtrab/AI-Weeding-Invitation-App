@@ -334,9 +334,8 @@ function SendPanel({ invitation, guests, selected, onClose }: {
     });
     const data = await res.json();
 
-    // Use NEXT_PUBLIC_APP_URL (set in Vercel env vars) — baked in at build time
-    // Falls back to window.location.origin as safety net
-    const origin = (process.env.NEXT_PUBLIC_APP_URL || window.location.origin).replace(/\/$/, "");
+    // window.location.origin is ALWAYS the correct domain — no env vars needed
+    const origin = window.location.origin;
     const slug       = data.invitationSlug || invitation.slug;
     const couple     = data.coupleName     || invitation.coupleName || invitation.title;
     const venue      = data.venue          || invitation.venue;
