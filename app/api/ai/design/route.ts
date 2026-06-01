@@ -26,7 +26,7 @@ Return ONLY valid JSON:
     "direction": "ltr or rtl",
     "patternStyle": "arabesque | sakura | stars | geometric | floral | calligraphy | celestial | bamboo | wave"
   },
-  "imagePrompt": "A highly detailed cinematic scene for an AI image generator. No text, no words. Ultra-detailed description: scene setting, lighting (golden hour / moonlight / lanterns), atmosphere, characters if any (from behind, no faces), specific visual elements matching the theme, color palette, art style (anime cinematic / oil painting / watercolor / etc). End with: masterpiece, highly detailed, cinematic composition, 8k quality, emotional and romantic atmosphere",
+  "imagePrompt": "CRITICAL: Write a 100-180 word image generation prompt. NO text/words/letters in image. Structure: [Art style] + [Detailed scene description] + [Specific lighting] + [Atmosphere] + [Visual elements from theme] + [Color palette] + [Quality: masterpiece, ultra-detailed, cinematic, 8k, beautiful, emotional]. Characters from behind only, no faces. Be EXTREMELY specific and vivid. Example for Japanese theme: anime cinematic illustration, ancient Japanese village at twilight, paper lanterns glowing orange against purple sky, cherry blossoms swirling, stone bridge over misty river, two silhouettes from behind, Makoto Shinkai style, volumetric god rays, ultra-detailed, masterpiece",
   "coverSpec": {
     "topSymbol": "Most fitting emoji or symbol for the theme (e.g. 🍒 🌙 ⚔️ 🌸 🕌 ✦ 🏮 🌺)",
     "petalEmoji": "Floating particle emoji matching theme (e.g. 🌸 ❄️ 🍂 ✨ 🌟 💫 🌺)",

@@ -6,9 +6,10 @@ import type { Invitation } from "@/types";
 interface Props {
   invitation: Invitation;
   guestName?: string;
-  imageUrl?: string;       // Pre-generated background image
-  imagePrompt?: string;    // Prompt to load from Pollinations
+  imageUrl?: string;
+  imagePrompt?: string;
   trackingToken?: string;
+  isPreview?: boolean;
 }
 
 type Scene = "cover" | "story" | "details" | "message";
@@ -337,8 +338,8 @@ const DEFAULT_SPEC: InvitationSpec = {
 };
 
 // ── Main template ──────────────────────────────────────────────────────────
-export function CinematicTemplate({ invitation, guestName, imageUrl, imagePrompt, trackingToken: _t }: Props) {
-  const [scene, setScene] = useState<Scene>("cover");
+export function CinematicTemplate({ invitation, guestName, imageUrl, imagePrompt, trackingToken: _t, isPreview = false }: Props) {
+  const [scene, setScene] = useState<Scene>(isPreview ? "details" : "cover");
   const [bgImage, setBgImage] = useState<string | null>(imageUrl || null);
   const [spec, setSpec] = useState<InvitationSpec>(DEFAULT_SPEC);
   const audioRef = useRef<AudioContext | null>(null);
@@ -380,8 +381,61 @@ export function CinematicTemplate({ invitation, guestName, imageUrl, imagePrompt
     } catch { /* ignore */ }
   };
 
-  const handleOpen = () => { startMusic(); setScene("story"); };
+  const handleOpen = () => { if (!isPreview) startMusic(); setScene("story"); };
 
+  // Preview mode: show everything in one scroll
+  if (isPreview) {
+    return (
+      <div className="text-white" style={{ background: spec.palette.bg }}>
+        {/* Cover preview */}
+        <div style={{ height: 500, position: "relative", overflow: "hidden" }}>
+          {bgImage && (
+            <img src={bgImage} alt="" className="w-full h-full object-cover object-top"
+              style={{ filter: "brightness(0.6) saturate(1.3)" }}
+              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+          )}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6"
+            style={{ background: bgImage ? `linear-gradient(to bottom, transparent 40%, ${spec.palette.bg}cc 80%, ${spec.palette.bg} 100%)` : `linear-gradient(135deg, ${spec.palette.bg}, ${spec.palette.surface})` }}>
+            <div className="text-4xl mb-3" style={{ filter: "drop-shadow(0 0 10px rgba(255,215,0,0.5))" }}>{spec.topSymbol}</div>
+            <h1 style={{ fontFamily: `'${spec.fontHeading}', serif`, fontSize: "clamp(2rem,6vw,3rem)", fontWeight: 300, color: spec.palette.text, lineHeight: 1.1 }}>
+              {invitation.coupleName?.includes("&") ? (
+                <>
+                  {invitation.coupleName.split("&")[0].trim()}
+                  <em style={{ display: "block", color: spec.palette.primary, fontSize: "0.55em", fontStyle: "normal" }}>✦ & ✦</em>
+                  {invitation.coupleName.split("&")[1].trim()}
+                </>
+              ) : invitation.coupleName || invitation.title}
+            </h1>
+            <p className="mt-3 text-sm italic" style={{ color: spec.palette.text, opacity: 0.7, fontFamily: `'${spec.fontHeading}', serif` }}>{spec.tagline}</p>
+          </div>
+        </div>
+        {/* Story */}
+        <div className="px-6 py-8 text-center border-t" style={{ borderColor: `${spec.palette.primary}20`, background: spec.palette.surface }}>
+          <p className="text-xs uppercase tracking-[0.3em] mb-3" style={{ color: spec.palette.primary, opacity: 0.7 }}>{spec.storyLabel}</p>
+          <p className="text-base leading-relaxed italic" style={{ fontFamily: `'${spec.fontHeading}', serif`, color: spec.palette.text, opacity: 0.85 }}>{spec.storyText}</p>
+        </div>
+        {/* Details */}
+        <div className="px-6 py-6">
+          <p className="text-xs uppercase tracking-[0.3em] text-center mb-4" style={{ color: spec.palette.primary, opacity: 0.7 }}>✦ {spec.detailsLabel} ✦</p>
+          {[
+            { icon: "📅", label: "Date", value: new Date(invitation.eventDate).toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) },
+            { icon: "🕐", label: "Time", value: new Date(invitation.eventDate).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) },
+            { icon: spec.venueIcon, label: "Venue", value: invitation.venue },
+          ].map(row => (
+            <div key={row.label} className="flex gap-3 items-center py-3 border-b" style={{ borderColor: `${spec.palette.primary}15` }}>
+              <span className="text-xl">{row.icon}</span>
+              <div>
+                <p className="text-xs uppercase tracking-[0.1em]" style={{ color: spec.palette.primary, opacity: 0.6 }}>{row.label}</p>
+                <p style={{ fontFamily: `'${spec.fontHeading}', serif`, color: spec.palette.text }}>{row.value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Live invitation — cinematic scene-by-scene
   return (
     <div className="bg-[#0a0a0a] text-white" style={{ minHeight: "100dvh" }}>
       <AnimatePresence mode="wait">

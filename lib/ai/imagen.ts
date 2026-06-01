@@ -9,34 +9,53 @@ export async function generateSceneImage(_prompt: string): Promise<string | null
   return null;
 }
 
-// Build a Pollinations.ai URL for the given image prompt
-// This URL works as a direct <img src> in the browser
+// Build a Pollinations.ai URL — higher quality settings
 export function buildPollinationsUrl(prompt: string): string {
-  const seed = Math.floor(Math.random() * 1000000);
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1080&height=1920&model=flux&nologo=true&enhance=true&seed=${seed}`;
+  const seed = Math.floor(Math.random() * 999999) + 1;
+  // flux-pro gives much better quality than base flux
+  // width/height at 768x1366 (9:16) balances quality vs load time
+  const params = new URLSearchParams({
+    width:   "768",
+    height:  "1366",
+    model:   "flux-pro",    // Higher quality than base flux
+    nologo:  "true",
+    enhance: "true",        // Auto-enhance prompt
+    seed:    String(seed),
+  });
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params}`;
 }
 
-// Generate an optimized image prompt from user's theme description
+// Alternative: build a URL using a different free service as backup
+export function buildBackupImageUrl(prompt: string): string {
+  // Lexica Aperture — high quality, free
+  const seed = Math.floor(Math.random() * 999999) + 1;
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=768&height=1366&model=flux-realism&nologo=true&seed=${seed}`;
+}
+
+// Generate a highly optimized image prompt for maximum visual quality
 export async function generateImagePrompt(themeDescription: string, coupleName: string): Promise<string> {
   const { generateWithFallback } = await import("./gemini");
 
-  const prompt = `You are a professional AI image prompt engineer for wedding invitations.
-Convert this wedding theme into a vivid image generation prompt.
+  const prompt = `You are an expert AI image prompt engineer. Create a stunning image generation prompt for a wedding invitation background.
 
-Theme: ${themeDescription}
+Theme description: ${themeDescription}
 Couple: ${coupleName}
 
-Rules:
-- NO text, NO words, NO letters anywhere in the image
-- Portrait orientation (9:16)
-- Describe: setting, lighting, atmosphere, mood, colors, art style
-- Be specific and vivid (e.g. "golden lanterns reflecting on still water", "cherry blossoms drifting past stone temple gates at dusk")
-- Art style: anime cinematic / oil painting / watercolor / photorealistic (pick what fits)
-- End with: "masterpiece, ultra-detailed, cinematic composition, beautiful, emotional, romantic"
-- Maximum 120 words
+CRITICAL RULES:
+- ABSOLUTELY NO text, words, letters, numbers, or writing in the image
+- Portrait/vertical composition (taller than wide)
+- The image should be a SCENE or LANDSCAPE — not just a pattern
+- NO faces visible (characters from behind only if included)
 
-Return ONLY the image prompt text.`;
+STRUCTURE YOUR PROMPT AS:
+[Art style] + [Main scene/setting] + [Lighting details] + [Atmosphere/mood] + [Specific visual elements] + [Color palette] + [Quality tags]
 
-  const result = await generateWithFallback(prompt, { temperature: 0.9 });
-  return result.trim();
+Example for Naruto theme:
+"Anime cinematic illustration, hidden ninja village at dusk seen from above, ancient Japanese architecture with curved rooftops, giant stone mountain carvings in background, hundreds of warm orange and red paper lanterns floating upward, full moon rising behind misty mountains, cherry blossom petals swirling in wind, two small silhouettes standing on wooden bridge from behind, golden chakra energy particles glowing, deep purple and orange twilight sky, Makoto Shinkai art style, volumetric lighting, ultra-detailed, 8k resolution, masterpiece quality, emotional romantic atmosphere"
+
+Now write the prompt for the given theme. Be EXTREMELY specific and vivid. 100-180 words.
+Return ONLY the prompt text, nothing else.`;
+
+  const result = await generateWithFallback(prompt, { temperature: 0.95 });
+  return result.trim().replace(/^["']|["']$/g, ""); // Remove surrounding quotes
 }
