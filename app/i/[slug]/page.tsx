@@ -23,7 +23,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (!inv) return { title: "Invitation" };
 
   const couple    = inv.coupleName || inv.title;
-  const base      = process.env.NEXTAUTH_URL || "https://ai-weeding-invitation-app.vercel.app";
+  const base      = process.env.NEXTAUTH_URL || 
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://ai-weeding-invitation-app.vercel.app");
   const pageUrl   = `${base}/i/${slug}${token ? `?g=${token}` : ""}`;
 
   // Resolve guest name

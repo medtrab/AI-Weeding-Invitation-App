@@ -21,7 +21,10 @@ export async function POST(req: NextRequest, { params }: Params) {
     where: { id: { in: guestIds }, invitationId: id },
   });
 
-  const baseUrl = process.env.NEXTAUTH_URL || "https://ai-weeding-invitation-app.vercel.app";
+  // Use request origin for reliable URL regardless of which Vercel domain is active
+  const host = req.headers.get("host") || "";
+  const proto = req.headers.get("x-forwarded-proto") || "https";
+  const baseUrl = process.env.NEXTAUTH_URL || `${proto}://${host}`;
 
   const results = guests.map((guest: { id: string; name: string; phone: string | null; token: string }) => {
     // Personalized link with guest token
