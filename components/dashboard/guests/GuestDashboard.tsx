@@ -334,8 +334,9 @@ function SendPanel({ invitation, guests, selected, onClose }: {
     });
     const data = await res.json();
 
-    // Build ALL URLs client-side using window.location.origin — always correct
-    const origin     = window.location.origin;
+    // Use NEXT_PUBLIC_APP_URL (set in Vercel env vars) — baked in at build time
+    // Falls back to window.location.origin as safety net
+    const origin = (process.env.NEXT_PUBLIC_APP_URL || window.location.origin).replace(/\/$/, "");
     const slug       = data.invitationSlug || invitation.slug;
     const couple     = data.coupleName     || invitation.coupleName || invitation.title;
     const venue      = data.venue          || invitation.venue;
