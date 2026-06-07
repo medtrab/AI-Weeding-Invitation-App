@@ -305,20 +305,40 @@ ${photos.length > 0 ? `Photos provided: ${photos.length} couple photos — incor
 
       if (!data.spec) throw new Error("No design received");
 
-      // Extract editable fields from spec
+      // Extract ALL editable text fields from spec
       const spec = data.spec as Record<string, unknown>;
       const fields: EditableField[] = [];
-      const sects = (spec.sections as Array<Record<string, unknown>>) || [];
 
-      sects.forEach(s => {
-        if (s.heading)  fields.push({ key: `${s.type}_heading`, label: `${s.type} heading`, value: String(s.heading) });
-        if (s.message)  fields.push({ key: `${s.type}_message`, label: `${s.type} message`, value: String(s.message) });
-        if (s.quote)    fields.push({ key: `${s.type}_quote`,   label: `${s.type} quote`,   value: String(s.quote)   });
+      // Cover spec fields
+      const coverSpec = (spec.coverSpec as Record<string, unknown>) || {};
+      const coverFields: Array<[string, string]> = [
+        ["tagline",    "Cover tagline"],
+        ["storyText",  "Story text"],
+        ["storyLabel", "Story section label"],
+        ["detailsLabel","Details section label"],
+        ["messageTitle","Message section title"],
+      ];
+      coverFields.forEach(([k, label]) => {
+        if (coverSpec[k]) fields.push({ key: `coverSpec_${k}`, label, value: String(coverSpec[k]) });
       });
 
-      const coverSpec = (spec.coverSpec as Record<string, unknown>) || {};
-      if (coverSpec.tagline)   fields.push({ key: "cover_tagline",   label: "Cover tagline",   value: String(coverSpec.tagline)   });
-      if (coverSpec.storyText) fields.push({ key: "cover_story",     label: "Story text",      value: String(coverSpec.storyText) });
+      // Section fields
+      const sects = (spec.sections as Array<Record<string, unknown>>) || [];
+      const FIELD_LABELS: Record<string, string> = {
+        heading: "Heading", message: "Message", quote: "Quote",
+        subheading: "Subheading", venueName: "Venue name",
+        venueDescription: "Venue description", dresscode: "Dress code",
+        placeholder: "Input placeholder", submitLabel: "Button text",
+      };
+      sects.forEach((s, idx) => {
+        const type = String(s.type || `section${idx}`);
+        const label = type.charAt(0).toUpperCase() + type.slice(1);
+        Object.entries(FIELD_LABELS).forEach(([field, fieldLabel]) => {
+          if (s[field] && String(s[field]).trim()) {
+            fields.push({ key: `section_${idx}_${field}`, label: `${label} — ${fieldLabel}`, value: String(s[field]) });
+          }
+        });
+      });
 
       setEditFields(fields);
       setBgImage(data.pollinationsUrl as string || data.imageData as string || null);
@@ -349,23 +369,27 @@ ${photos.length > 0 ? `Photos provided: ${photos.length} couple photos — incor
       const parsed = JSON.parse(raw);
       const spec = parsed.spec as Record<string, unknown>;
       const sects = (spec.sections as Array<Record<string, unknown>>) || [];
+      const coverSpec = spec.coverSpec as Record<string, unknown> | undefined;
 
       updated.forEach(f => {
-        // Key format: "sectiontype_fieldname" e.g. "story_message"
-        const underscoreIdx = f.key.indexOf("_");
-        const stype = f.key.slice(0, underscoreIdx);
-        const field = f.key.slice(underscoreIdx + 1);
-        const sect = sects.find((s: Record<string, unknown>) => s.type === stype);
-        if (sect && field) sect[field] = f.value;
-        const coverSpec = spec.coverSpec as Record<string, unknown> | undefined;
-        if (coverSpec && stype === "cover") coverSpec[field] = f.value;
+        const parts = f.key.split("_");
+
+        if (parts[0] === "coverSpec" && coverSpec) {
+          // Key: coverSpec_tagline, coverSpec_storyText, etc.
+          const field = parts.slice(1).join("_");
+          coverSpec[field] = f.value;
+        } else if (parts[0] === "section") {
+          // Key: section_0_heading, section_1_message, etc.
+          const idx  = parseInt(parts[1]);
+          const field = parts.slice(2).join("_");
+          if (!isNaN(idx) && sects[idx]) sects[idx][field] = f.value;
+        }
       });
 
       const newHtml = JSON.stringify(parsed);
-      // Update store (triggers autosave)
       updateField("generatedHtml" as never, newHtml as never);
 
-      // Also save directly to DB immediately
+      // Save to DB immediately (don't rely on autosave delay)
       if (invitationId) {
         await fetch(`/api/invitations/${invitationId}`, {
           method: "PATCH",
