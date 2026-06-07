@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
   LayoutDashboard, FileText, BarChart2,
-  Settings, LogOut, Plus, Crown, Menu, X, Users,
+  Settings, LogOut, Plus, Crown, Menu, X, Users, FlaskConical,
 } from "lucide-react";
 import { ToastContainer } from "@/components/ui/Toast";
 import { useState } from "react";
@@ -14,6 +14,7 @@ const NAV = [
   { href: "/dashboard/invitations", label: "Invitations", icon: FileText        },
   { href: "/dashboard/analytics",   label: "Analytics",   icon: BarChart2       },
   { href: "/dashboard/settings",    label: "Settings",    icon: Settings        },
+  { href: "/dashboard/lab",          label: "Design Lab",  icon: FlaskConical    },
 ];
 
 interface Props {
