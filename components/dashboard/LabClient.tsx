@@ -223,20 +223,35 @@ function PromptCard({ prompt, invitations, onTest }: {
               {invitations.length === 0 ? (
                 <p className="text-xs text-cream/30">No published invitations — publish one first</p>
               ) : (
-                <div className="flex gap-2">
-                  <select value={selectedInv} onChange={e => setSelectedInv(e.target.value)}
-                    className="flex-1 bg-gold/[0.04] border border-gold/20 text-cream text-xs px-3 py-2 outline-none">
-                    {invitations.map(inv => (
-                      <option key={inv.id} value={inv.id} className="bg-[#0D0B08]">
-                        {inv.coupleName || inv.title}
-                      </option>
-                    ))}
-                  </select>
-                  <button onClick={() => onTest(prompt, selectedInv)}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-gold text-deep text-xs uppercase tracking-[0.15em] hover:bg-gold-light transition-colors">
-                    <Play size={11} /> Generate
-                  </button>
-                </div>
+                <>
+                  <div className="flex gap-2 flex-wrap">
+                    <select value={selectedInv} onChange={e => setSelectedInv(e.target.value)}
+                      className="flex-1 min-w-0 bg-gold/[0.04] border border-gold/20 text-cream text-xs px-3 py-2 outline-none">
+                      {invitations.map(inv => (
+                        <option key={inv.id} value={inv.id} className="bg-[#0D0B08]">
+                          {inv.coupleName || inv.title}
+                        </option>
+                      ))}
+                    </select>
+                    <button onClick={() => onTest(prompt, selectedInv)}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-gold text-deep text-xs uppercase tracking-[0.15em] hover:bg-gold-light transition-colors">
+                      <Play size={11} /> Generate
+                    </button>
+                  </div>
+                  {selectedInv && (
+                    <div className="flex gap-2 mt-1.5">
+                      <a href={`/builder/${selectedInv}`}
+                        className="flex items-center gap-1 text-[10px] text-gold/50 hover:text-gold transition-colors">
+                        ✏️ Open builder
+                      </a>
+                      <span className="text-cream/20">·</span>
+                      <a href={`/builder/${selectedInv}/preview`} target="_blank"
+                        className="flex items-center gap-1 text-[10px] text-cream/40 hover:text-cream/70 transition-colors">
+                        👁 Preview
+                      </a>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </motion.div>
@@ -248,7 +263,7 @@ function PromptCard({ prompt, invitations, onTest }: {
 
 // ── Test result ────────────────────────────────────────────────────────────
 function TestResult({ result, invitations }: {
-  result: { loading: boolean; error: string; data: Record<string, unknown> | null; invitationSlug: string };
+  result: { loading: boolean; error: string; data: Record<string, unknown> | null; invitationSlug: string; invitationId?: string };
   invitations: InvitationOption[];
 }) {
   if (result.loading) return (
@@ -277,23 +292,32 @@ function TestResult({ result, invitations }: {
 
   const inv = invitations.find(i => i.slug === result.invitationSlug);
   const viewUrl = inv ? `/i/${inv.slug}` : null;
+  const invitationId = result.invitationId || inv?.id;
 
   return (
     <motion.div className="border border-green-500/25 bg-green-500/5 overflow-hidden"
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
 
       <div className="p-4 border-b border-green-500/15">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Check size={14} className="text-green-400" />
             <span className="text-sm text-green-400 font-medium">Generated: {spec?.theme?.name || "Invitation"}</span>
           </div>
-          {viewUrl && (
-            <a href={viewUrl} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gold text-deep text-xs uppercase tracking-[0.15em] hover:bg-gold-light transition-colors">
-              <ExternalLink size={11} /> View Invitation
-            </a>
-          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            {invitationId && (
+              <a href={`/builder/${invitationId}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-gold/40 text-gold text-xs uppercase tracking-[0.15em] hover:bg-gold/10 transition-colors">
+                ✏️ Edit in Builder
+              </a>
+            )}
+            {viewUrl && (
+              <a href={viewUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gold text-deep text-xs uppercase tracking-[0.15em] hover:bg-gold-light transition-colors">
+                <ExternalLink size={11} /> View Live
+              </a>
+            )}
+          </div>
         </div>
       </div>
 
@@ -346,7 +370,7 @@ function TestResult({ result, invitations }: {
 export function LabClient({ invitations }: { invitations: InvitationOption[] }) {
   const [result, setResult] = useState<{
     loading: boolean; error: string;
-    data: Record<string, unknown> | null; invitationSlug: string;
+    data: Record<string, unknown> | null; invitationSlug: string; invitationId?: string;
   }>({ loading: false, error: "", data: null, invitationSlug: "" });
 
   const [customTheme, setCustomTheme]     = useState("");
@@ -359,7 +383,7 @@ export function LabClient({ invitations }: { invitations: InvitationOption[] }) 
     const inv = invitations.find(i => i.id === invitationId);
     if (!inv) return;
 
-    setResult({ loading: true, error: "", data: null, invitationSlug: inv.slug });
+    setResult({ loading: true, error: "", data: null, invitationSlug: inv.slug, invitationId: inv.id });
 
     const sectionText = prompt.sections
       .map(s => `SECTION — ${s.label.toUpperCase()} (${s.type})\n${s.content}`)
@@ -383,9 +407,9 @@ export function LabClient({ invitations }: { invitations: InvitationOption[] }) 
       });
       const data = await res.json() as Record<string, unknown>;
       if (!res.ok) throw new Error((data.detail as string) || "Failed");
-      setResult({ loading: false, error: "", data, invitationSlug: inv.slug });
+      setResult({ loading: false, error: "", data, invitationSlug: inv.slug, invitationId: inv.id });
     } catch (err) {
-      setResult({ loading: false, error: err instanceof Error ? err.message : "Error", data: null, invitationSlug: inv.slug });
+      setResult({ loading: false, error: err instanceof Error ? err.message : "Error", data: null, invitationSlug: inv.slug, invitationId: inv.id });
     }
   };
 

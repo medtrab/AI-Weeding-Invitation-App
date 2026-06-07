@@ -342,9 +342,7 @@ ${photos.length > 0 ? `Photos provided: ${photos.length} couple photos — incor
   };
 
   // Save edited fields back to the spec
-  const handleEditSave = (updated: EditableField[]) => {
-    // Re-apply edited text to the invitation store generatedHtml
-    // This patches the text content without changing the visual spec
+  const handleEditSave = async (updated: EditableField[]) => {
     const raw = (useInvitationStore.getState().invitation as { generatedHtml?: string })?.generatedHtml;
     if (!raw) return;
     try {
@@ -353,16 +351,31 @@ ${photos.length > 0 ? `Photos provided: ${photos.length} couple photos — incor
       const sects = (spec.sections as Array<Record<string, unknown>>) || [];
 
       updated.forEach(f => {
-        const [stype, field] = f.key.split("_");
-        const sect = sects.find(s => s.type === stype);
+        // Key format: "sectiontype_fieldname" e.g. "story_message"
+        const underscoreIdx = f.key.indexOf("_");
+        const stype = f.key.slice(0, underscoreIdx);
+        const field = f.key.slice(underscoreIdx + 1);
+        const sect = sects.find((s: Record<string, unknown>) => s.type === stype);
         if (sect && field) sect[field] = f.value;
-
         const coverSpec = spec.coverSpec as Record<string, unknown> | undefined;
         if (coverSpec && stype === "cover") coverSpec[field] = f.value;
       });
 
-      updateField("generatedHtml" as never, JSON.stringify(parsed) as never);
-    } catch {}
+      const newHtml = JSON.stringify(parsed);
+      // Update store (triggers autosave)
+      updateField("generatedHtml" as never, newHtml as never);
+
+      // Also save directly to DB immediately
+      if (invitationId) {
+        await fetch(`/api/invitations/${invitationId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ generatedHtml: newHtml }),
+        });
+      }
+    } catch (e) {
+      console.error("Edit save failed:", e);
+    }
   };
 
   return (

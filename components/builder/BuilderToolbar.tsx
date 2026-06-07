@@ -40,11 +40,16 @@ export function BuilderToolbar() {
         <Redo2 size={14} />
       </button>
 
-      {invitation?.status === "published" && (
-        <Link href={`/i/${invitation.slug}`} target="_blank"
-          className="flex items-center gap-1.5 px-4 py-2 border border-gold/20 text-[11px] uppercase tracking-[0.15em] text-cream/50 hover:border-gold/50 hover:text-gold transition-all">
+      {/* Preview — always available, opens in new tab */}
+      {invitation && (
+        <a
+          href={`/builder/${invitation.id}/preview`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 px-4 py-2 border border-gold/20 text-[11px] uppercase tracking-[0.15em] text-cream/50 hover:border-gold/50 hover:text-gold transition-all"
+        >
           <Eye size={12} /> Preview
-        </Link>
+        </a>
       )}
 
       <button
