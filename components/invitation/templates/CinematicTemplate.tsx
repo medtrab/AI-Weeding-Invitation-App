@@ -3,26 +3,97 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Invitation } from "@/types";
 
+// ── Types ──────────────────────────────────────────────────────────────────
+interface SpecSection {
+  type: string;
+  heading?: string;
+  subheading?: string;
+  quote?: string;
+  message?: string;
+  venueName?: string;
+  venueDescription?: string;
+  time?: string;
+  dresscode?: string;
+  placeholder?: string;
+  submitLabel?: string;
+}
+
+interface Spec {
+  theme?: {
+    palette?: { bg?: string; surface?: string; primary?: string; accent?: string; text?: string; textMuted?: string };
+    fontHeading?: string;
+    petalEmoji?: string;
+    topSymbol?: string;
+    direction?: string;
+  };
+  imagePrompt?: string;
+  coverSpec?: {
+    tagline?: string;
+    storyLabel?: string;
+    storyText?: string;
+    detailsLabel?: string;
+    venueIcon?: string;
+    messageTitle?: string;
+    thankEmoji?: string;
+  };
+  sections?: SpecSection[];
+}
+
 interface Props {
   invitation: Invitation;
   guestName?: string;
   imageUrl?: string;
-  imagePrompt?: string;
   trackingToken?: string;
   isPreview?: boolean;
 }
 
-type Scene = "cover" | "story" | "details" | "message";
+// ── Palette helper ─────────────────────────────────────────────────────────
+function getPalette(spec: Spec) {
+  const p = spec.theme?.palette || {};
+  return {
+    bg:      p.bg      || "#0D0B08",
+    surface: p.surface || "#1A1408",
+    primary: p.primary || "#C9A84C",
+    accent:  p.accent  || "#E8C86A",
+    text:    p.text    || "#FAF7F2",
+    muted:   p.textMuted || "rgba(245,240,232,0.5)",
+  };
+}
 
-// ── Floating petals ────────────────────────────────────────────────────────
-function Petals({ emoji = "🌸", count = 20 }: { emoji?: string; count?: number }) {
+// ── Background ─────────────────────────────────────────────────────────────
+function Background({ imageUrl, p }: { imageUrl?: string; p: ReturnType<typeof getPalette> }) {
+  return (
+    <div className="fixed inset-0 z-0">
+      {imageUrl ? (
+        <>
+          <div style={{
+            position: "absolute", inset: 0,
+            backgroundImage: `url(${imageUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center top",
+            filter: "brightness(0.55) saturate(1.4) contrast(1.05)",
+          }} />
+          <div style={{
+            position: "absolute", inset: 0,
+            background: `linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 25%, ${p.bg}80 60%, ${p.bg}ee 85%, ${p.bg} 100%)`,
+          }} />
+        </>
+      ) : (
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${p.bg} 0%, ${p.surface} 50%, ${p.bg} 100%)` }} />
+      )}
+    </div>
+  );
+}
+
+// ── Floating particles ─────────────────────────────────────────────────────
+function Petals({ emoji = "🌸" }: { emoji?: string }) {
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-10">
-      {Array.from({ length: count }).map((_, i) => (
-        <motion.div key={i} className="absolute select-none text-xl"
-          style={{ left: `${(i * 5.1) % 100}%`, top: "-40px", fontSize: `${0.8 + (i % 3) * 0.4}rem` }}
-          animate={{ y: ["0vh", "110vh"], rotate: [0, 360 * (i % 2 === 0 ? 1 : -1)], x: [(i % 3 - 1) * 30, (i % 3 - 1) * -30, (i % 3 - 1) * 30], opacity: [0, 0.9, 0.7, 0] }}
-          transition={{ duration: 6 + (i % 5) * 1.5, delay: i * 0.35, repeat: Infinity, ease: "linear" }}>
+      {Array.from({ length: 16 }).map((_, i) => (
+        <motion.div key={i} className="absolute select-none"
+          style={{ left: `${(i * 6.3) % 100}%`, top: "-30px", fontSize: `${0.7 + (i % 3) * 0.3}rem` }}
+          animate={{ y: ["0vh", "110vh"], rotate: [0, 360 * (i % 2 ? 1 : -1)], opacity: [0, 0.8, 0.6, 0] }}
+          transition={{ duration: 7 + (i % 5) * 1.5, delay: i * 0.4, repeat: Infinity, ease: "linear" }}>
           {emoji}
         </motion.div>
       ))}
@@ -30,119 +101,92 @@ function Petals({ emoji = "🌸", count = 20 }: { emoji?: string; count?: number
   );
 }
 
-// ── Particle sparks ────────────────────────────────────────────────────────
-function Particles({ color = "#FFD700" }: { color?: string }) {
-  return (
-    <div className="fixed inset-0 pointer-events-none z-10 overflow-hidden">
-      {Array.from({ length: 40 }).map((_, i) => (
-        <motion.div key={i} className="absolute rounded-full"
-          style={{ width: i % 5 === 0 ? 3 : 1.5, height: i % 5 === 0 ? 3 : 1.5, background: color,
-            left: `${(i * 2.6) % 100}%`, top: `${(i * 3.1) % 100}%` }}
-          animate={{ opacity: [0, 0.8, 0], scale: [0, 1.5, 0], y: [0, -40 - (i % 5) * 15] }}
-          transition={{ duration: 2 + (i % 4), delay: i * 0.2, repeat: Infinity, repeatDelay: 1 }} />
-      ))}
-    </div>
-  );
-}
-
 // ── Cover scene ────────────────────────────────────────────────────────────
-function CoverScene({ invitation, guestName, bgImage, onOpen, spec }: {
-  invitation: Invitation; guestName?: string; bgImage: string | null;
-  onOpen: () => void; spec: InvitationSpec;
+function CoverScene({ invitation, guestName, spec, p, onOpen }: {
+  invitation: Invitation; guestName?: string; spec: Spec;
+  p: ReturnType<typeof getPalette>; onOpen: () => void;
 }) {
   const [tapped, setTapped] = useState(false);
-  const p = spec.palette;
+  const heroSection = spec.sections?.find(s => s.type === "hero");
+  const font = spec.theme?.fontHeading || "Georgia";
 
   const handleTap = () => {
     if (tapped) return;
     setTapped(true);
-    setTimeout(onOpen, 1200);
+    setTimeout(onOpen, 1000);
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden cursor-pointer"
-      onClick={handleTap}
-      style={{ background: bgImage ? "transparent" : `linear-gradient(135deg, ${p.bg} 0%, #050402 100%)` }}>
+    <div className="fixed inset-0 z-20 flex flex-col items-center justify-center text-center px-6 cursor-pointer"
+      onClick={handleTap}>
+      <motion.div className="relative z-10 max-w-sm w-full"
+        initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.2 }}>
 
-      {/* Background image — CSS background-image scales perfectly at all screen sizes */}
-      {bgImage && (
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 transition-opacity duration-1000"
-            style={{
-              backgroundImage: `url(${bgImage})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center top",
-              backgroundRepeat: "no-repeat",
-              filter: "brightness(0.6) saturate(1.4) contrast(1.05)",
-            }} />
-          {/* Gradient overlay — stronger at bottom for text readability */}
-          <div className="absolute inset-0" style={{
-            background: `linear-gradient(
-              to bottom,
-              rgba(0,0,0,0.1) 0%,
-              rgba(0,0,0,0.05) 30%,
-              ${p.bg}88 60%,
-              ${p.bg}dd 80%,
-              ${p.bg} 100%
-            )`
-          }} />
-        </div>
-      )}
-
-      <Petals emoji={spec.petalEmoji} count={24} />
-      <Particles color={p.primary} />
-
-      {/* Content overlay */}
-      <motion.div className="relative z-20 text-center px-8 max-w-sm w-full"
-        initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.2, delay: 0.3 }}>
-
-        {/* Top ornament */}
-        {spec.topSymbol && (
-          <motion.div className="text-5xl mb-4" style={{ filter: "drop-shadow(0 0 12px rgba(255,215,0,0.6))" }}
-            animate={{ scale: [1, 1.08, 1], rotate: tapped ? [0, 360] : [0, 0] }}
-            transition={{ duration: tapped ? 0.8 : 3, repeat: tapped ? 0 : Infinity, ease: "easeInOut" }}>
-            {spec.topSymbol}
-          </motion.div>
-        )}
+        {/* Top symbol */}
+        <motion.div className="text-5xl mb-4"
+          animate={tapped ? { scale: [1, 1.5, 0], opacity: [1, 1, 0] } : { scale: [1, 1.06, 1] }}
+          transition={{ duration: tapped ? 0.6 : 3, repeat: tapped ? 0 : Infinity, ease: "easeInOut" }}
+          style={{ filter: `drop-shadow(0 0 14px ${p.primary}90)` }}>
+          {spec.theme?.topSymbol || "✦"}
+        </motion.div>
 
         {/* Guest greeting */}
         {guestName && (
           <motion.p className="text-xs uppercase tracking-[0.35em] mb-3"
-            style={{ color: p.primary, opacity: 0.8 }}
-            initial={{ opacity: 0 }} animate={{ opacity: 0.8 }} transition={{ delay: 0.6 }}>
+            style={{ color: p.primary, opacity: 0.85 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 0.85 }} transition={{ delay: 0.4 }}>
             Dear {guestName}
           </motion.p>
         )}
 
         {/* Couple names */}
-        <motion.h1
-          style={{ fontFamily: `'${spec.fontHeading}', Georgia, serif`, fontSize: "clamp(2.8rem,9vw,4.5rem)", fontWeight: 300, color: p.text, lineHeight: 1.1, textShadow: `0 2px 20px ${p.primary}60` }}
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
+        <motion.h1 style={{
+          fontFamily: `'${font}', Georgia, serif`,
+          fontSize: "clamp(2.5rem,10vw,4.5rem)",
+          fontWeight: 300, color: p.text, lineHeight: 1.1,
+          textShadow: `0 2px 30px ${p.primary}50`,
+        }}
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
           {invitation.coupleName?.includes("&") ? (
             <>
               {invitation.coupleName.split("&")[0].trim()}
-              <em style={{ display: "block", color: p.primary, fontSize: "0.55em", margin: "0.2em 0", fontStyle: "normal" }}>✦ & ✦</em>
+              <em style={{ display: "block", color: p.primary, fontSize: "0.5em", fontStyle: "normal", margin: "0.3em 0" }}>
+                {heroSection?.subheading || "✦ & ✦"}
+              </em>
               {invitation.coupleName.split("&")[1].trim()}
             </>
           ) : invitation.coupleName || invitation.title}
         </motion.h1>
 
+        {/* Quote */}
+        {heroSection?.quote && (
+          <motion.p className="mt-4 text-sm leading-relaxed italic px-4"
+            style={{ fontFamily: `'${font}', serif`, color: p.text, opacity: 0.7 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 0.7 }} transition={{ delay: 1 }}>
+            {heroSection.quote}
+          </motion.p>
+        )}
+
         {/* Tagline */}
-        {spec.tagline && (
-          <motion.p className="mt-4 text-sm leading-relaxed italic"
-            style={{ color: p.text, opacity: 0.7, fontFamily: `'${spec.fontHeading}', serif` }}
-            initial={{ opacity: 0 }} animate={{ opacity: 0.7 }} transition={{ delay: 1.2 }}>
-            {spec.tagline}
+        {spec.coverSpec?.tagline && !heroSection?.quote && (
+          <motion.p className="mt-4 text-sm italic"
+            style={{ color: p.text, opacity: 0.65, fontFamily: `'${font}', serif` }}
+            initial={{ opacity: 0 }} animate={{ opacity: 0.65 }} transition={{ delay: 1 }}>
+            {spec.coverSpec.tagline}
           </motion.p>
         )}
 
         {/* Tap hint */}
         <motion.div className="mt-10 flex flex-col items-center gap-2"
-          animate={{ y: [0, -8, 0], opacity: tapped ? 0 : [0.5, 1, 0.5] }}
+          animate={{ y: [0, -8, 0], opacity: tapped ? [1, 0] : [0.5, 1, 0.5] }}
           transition={{ duration: 2, repeat: Infinity }}>
-          <div className="w-8 h-8 border rounded-full flex items-center justify-center"
-            style={{ borderColor: p.primary, color: p.primary }}>✦</div>
-          <p className="text-xs uppercase tracking-[0.25em]" style={{ color: p.primary, opacity: 0.6 }}>
+          <motion.div className="w-10 h-10 border-2 rounded-full flex items-center justify-center"
+            style={{ borderColor: p.primary, color: p.primary }}
+            animate={{ boxShadow: [`0 0 0px ${p.primary}00`, `0 0 20px ${p.primary}60`, `0 0 0px ${p.primary}00`] }}
+            transition={{ duration: 2, repeat: Infinity }}>
+            {tapped ? "✦" : "↓"}
+          </motion.div>
+          <p className="text-xs uppercase tracking-[0.3em]" style={{ color: p.primary, opacity: 0.6 }}>
             {tapped ? "Opening…" : "Tap to open"}
           </p>
         </motion.div>
@@ -151,49 +195,25 @@ function CoverScene({ invitation, guestName, bgImage, onOpen, spec }: {
   );
 }
 
-// ── Story scene ────────────────────────────────────────────────────────────
-function StoryScene({ invitation, spec, onNext }: { invitation: Invitation; spec: InvitationSpec; onNext: () => void }) {
-  const p = spec.palette;
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-16"
-      style={{ background: `linear-gradient(180deg, ${p.bg} 0%, ${p.surface} 50%, ${p.bg} 100%)` }}>
-      <motion.div className="max-w-sm w-full text-center space-y-6"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <motion.p className="text-xs uppercase tracking-[0.4em]" style={{ color: p.primary, opacity: 0.7 }}
-          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 0.7, y: 0 }} transition={{ delay: 0.2 }}>
-          {spec.storyLabel || "Our Story"}
-        </motion.p>
-        <motion.div className="text-5xl" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3, type: "spring" }}>
-          {spec.storyEmoji || "♥"}
-        </motion.div>
-        <motion.p className="text-lg leading-relaxed italic"
-          style={{ fontFamily: `'${spec.fontHeading}', serif`, color: p.text, opacity: 0.85, lineHeight: 1.9 }}
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 0.85, y: 0 }} transition={{ delay: 0.5 }}>
-          {spec.storyText || "Their journey brought them together in the most beautiful way…"}
-        </motion.p>
-        <motion.button onClick={onNext}
-          className="mt-8 px-8 py-3 border text-xs uppercase tracking-[0.25em] transition-all hover:opacity-80"
-          style={{ borderColor: `${p.primary}50`, color: p.primary }}
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
-          View Invitation ✦
-        </motion.button>
-      </motion.div>
-    </div>
-  );
-}
+// ── Generic section renderer ───────────────────────────────────────────────
+function SectionView({ section, spec, p, invitation, guestName, onNext, isLast }: {
+  section: SpecSection; spec: Spec; p: ReturnType<typeof getPalette>;
+  invitation: Invitation; guestName?: string;
+  onNext: () => void; isLast: boolean;
+}) {
+  const font = spec.theme?.fontHeading || "Georgia";
+  const resolveText = (text?: string) =>
+    (text || "").replace(/\{\{GUEST_NAME\}\}/g, guestName || "Dear Guest");
 
-// ── Details scene ──────────────────────────────────────────────────────────
-function DetailsScene({ invitation, spec, onNext }: { invitation: Invitation; spec: InvitationSpec; onNext: () => void }) {
-  const p = spec.palette;
-  const date = new Date(invitation.eventDate);
-  const dateStr = date.toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-  const timeStr = date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-
-  // Live countdown
+  const [msgValue, setMsgValue] = useState("");
+  const [msgSent, setMsgSent]   = useState(false);
   const [cd, setCd] = useState({ d: 0, h: 0, m: 0, s: 0 });
+
+  // Countdown for venue/details section
   useEffect(() => {
+    if (section.type !== "venue" && section.type !== "details" && section.type !== "countdown") return;
     const tick = () => {
-      const diff = date.getTime() - Date.now();
+      const diff = new Date(invitation.eventDate).getTime() - Date.now();
       if (diff > 0) setCd({
         d: Math.floor(diff / 86400000),
         h: Math.floor((diff % 86400000) / 3600000),
@@ -204,274 +224,324 @@ function DetailsScene({ invitation, spec, onNext }: { invitation: Invitation; sp
     tick();
     const iv = setInterval(tick, 1000);
     return () => clearInterval(iv);
-  }, []);
+  }, [section.type, invitation.eventDate]);
+
+  const sendMessage = async () => {
+    if (!msgValue.trim()) return;
+    await fetch(`/api/rsvp/${invitation.id}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ guestName: guestName || "Guest", message: msgValue, status: "attending" }),
+    }).catch(() => {});
+    setMsgSent(true);
+  };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-16"
-      style={{ background: `radial-gradient(ellipse at 50% 30%, ${p.surface} 0%, ${p.bg} 70%)` }}>
-      <motion.div className="max-w-sm w-full space-y-4"
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-16 relative z-20"
+      dir={spec.theme?.direction || "ltr"}>
+      <motion.div className="max-w-sm w-full"
+        initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
 
-        <p className="text-center text-xs uppercase tracking-[0.4em] mb-6" style={{ color: p.primary, opacity: 0.7 }}>
-          ✦ {spec.detailsLabel || "The Celebration"} ✦
-        </p>
+        {/* Section heading */}
+        {section.heading && (
+          <motion.h2 className="text-center mb-6"
+            style={{ fontFamily: `'${font}', serif`, fontSize: "clamp(1.4rem,4vw,2.2rem)", fontWeight: 300, color: p.primary, lineHeight: 1.2 }}
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            {resolveText(section.heading)}
+          </motion.h2>
+        )}
 
-        {[
-          { label: "Date", value: dateStr, icon: "📅" },
-          { label: "Time", value: timeStr, icon: "🕐" },
-          { label: "Venue", value: invitation.venue, icon: spec.venueIcon || "📍" },
-          invitation.venueAddress ? { label: "Address", value: invitation.venueAddress, icon: "🗺" } : null,
-        ].filter(Boolean).map((row, i) => row && (
-          <motion.div key={row.label} className="border px-5 py-4 flex gap-4 items-center"
-            style={{ borderColor: `${p.primary}25`, background: `${p.surface}88` }}
-            initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 * i + 0.2 }}>
-            <span className="text-2xl">{row.icon}</span>
-            <div>
-              <p className="text-xs uppercase tracking-[0.15em] mb-0.5" style={{ color: p.primary, opacity: 0.6 }}>{row.label}</p>
-              <p style={{ fontFamily: `'${spec.fontHeading}', serif`, fontSize: "1.05rem", color: p.text }}>{row.value}</p>
-            </div>
-          </motion.div>
-        ))}
+        {/* Divider */}
+        <div className="flex items-center gap-3 justify-center mb-6">
+          <div className="h-px flex-1 max-w-[60px]" style={{ background: `linear-gradient(to right, transparent, ${p.primary}60)` }} />
+          <span style={{ color: p.primary, opacity: 0.5 }}>◆</span>
+          <div className="h-px flex-1 max-w-[60px]" style={{ background: `linear-gradient(to left, transparent, ${p.primary}60)` }} />
+        </div>
 
-        {/* Countdown */}
-        {cd.d > 0 && (
-          <motion.div className="border px-5 py-5 text-center"
-            style={{ borderColor: `${p.primary}30`, background: `${p.primary}08` }}
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
-            <p className="text-xs uppercase tracking-[0.3em] mb-4" style={{ color: p.primary, opacity: 0.6 }}>Counting Down</p>
+        {/* STORY / WELCOME / CUSTOM / DRESSCODE — text content */}
+        {(section.type === "story" || section.type === "welcome" || section.type === "custom" || section.type === "dresscode") && section.message && (
+          <motion.p className="text-center leading-relaxed mb-6"
+            style={{ fontFamily: `'${font}', serif`, fontSize: "1.05rem", fontStyle: "italic", color: p.text, opacity: 0.82, lineHeight: 1.9 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 0.82 }} transition={{ delay: 0.3 }}>
+            {resolveText(section.message)}
+          </motion.p>
+        )}
+
+        {/* GUEST — personalized */}
+        {section.type === "guest" && section.message && (
+          <motion.p className="text-center leading-relaxed mb-6"
+            style={{ fontFamily: `'${font}', serif`, fontSize: "1.05rem", fontStyle: "italic", color: p.text, opacity: 0.82, lineHeight: 1.9 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 0.82 }} transition={{ delay: 0.3 }}>
+            {resolveText(section.message)}
+          </motion.p>
+        )}
+
+        {/* VENUE / DETAILS */}
+        {(section.type === "venue" || section.type === "details") && (
+          <div className="space-y-3 mb-6">
+            {[
+              { icon: spec.coverSpec?.venueIcon || "📍", label: "Venue",   value: section.venueName || invitation.venue },
+              { icon: "📅", label: "Date",    value: new Date(invitation.eventDate).toLocaleDateString(spec.theme?.direction === "rtl" ? "ar-TN" : "en-US", { weekday:"long", day:"numeric", month:"long", year:"numeric" }) },
+              { icon: "🕐", label: "Time",    value: section.time || new Date(invitation.eventDate).toLocaleTimeString("en-US", { hour:"2-digit", minute:"2-digit" }) },
+              section.dresscode ? { icon: "👗", label: "Dress Code", value: section.dresscode } : null,
+              section.venueDescription ? { icon: "✦",  label: "About",   value: section.venueDescription } : null,
+            ].filter(Boolean).map((row, i) => row && (
+              <motion.div key={row.label} className="flex gap-3 items-start px-4 py-3 border"
+                style={{ borderColor: `${p.primary}20`, background: `${p.surface}99` }}
+                initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 * i + 0.2 }}>
+                <span className="text-xl shrink-0">{row.icon}</span>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.15em] mb-0.5" style={{ color: p.primary, opacity: 0.6 }}>{row.label}</p>
+                  <p style={{ fontFamily: `'${font}', serif`, fontSize: "0.95rem", color: p.text }}>{row.value}</p>
+                </div>
+              </motion.div>
+            ))}
+
+            {/* Countdown */}
+            {cd.d > 0 && (
+              <motion.div className="border px-4 py-4 text-center"
+                style={{ borderColor: `${p.primary}25`, background: `${p.primary}08` }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
+                <p className="text-xs uppercase tracking-[0.25em] mb-3" style={{ color: p.primary, opacity: 0.6 }}>
+                  {spec.coverSpec?.detailsLabel || "Counting Down"}
+                </p>
+                <div className="flex justify-center gap-4">
+                  {[{ v: cd.d, l: "Days" }, { v: cd.h, l: "Hours" }, { v: cd.m, l: "Min" }, { v: cd.s, l: "Sec" }].map(({ v, l }) => (
+                    <div key={l}>
+                      <p style={{ fontFamily: `'${font}', serif`, fontSize: "2rem", fontWeight: 300, color: p.primary, lineHeight: 1 }}>
+                        {String(v).padStart(2, "0")}
+                      </p>
+                      <p className="text-xs mt-1" style={{ color: p.text, opacity: 0.4 }}>{l}</p>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </div>
+        )}
+
+        {/* COUNTDOWN standalone */}
+        {section.type === "countdown" && cd.d > 0 && (
+          <div className="border px-4 py-6 text-center mb-6"
+            style={{ borderColor: `${p.primary}25`, background: `${p.primary}08` }}>
             <div className="flex justify-center gap-5">
               {[{ v: cd.d, l: "Days" }, { v: cd.h, l: "Hours" }, { v: cd.m, l: "Min" }, { v: cd.s, l: "Sec" }].map(({ v, l }) => (
-                <div key={l} className="text-center">
-                  <p style={{ fontFamily: `'${spec.fontHeading}', serif`, fontSize: "2.2rem", fontWeight: 300, color: p.primary, lineHeight: 1 }}>{String(v).padStart(2, "0")}</p>
+                <div key={l}>
+                  <p style={{ fontFamily: `'${font}', serif`, fontSize: "2.5rem", fontWeight: 300, color: p.primary, lineHeight: 1 }}>
+                    {String(v).padStart(2, "0")}
+                  </p>
                   <p className="text-xs mt-1" style={{ color: p.text, opacity: 0.4 }}>{l}</p>
                 </div>
               ))}
             </div>
-          </motion.div>
+          </div>
         )}
 
-        <motion.button onClick={onNext}
-          className="w-full py-4 text-xs uppercase tracking-[0.25em] transition-all hover:opacity-80"
-          style={{ background: p.primary, color: p.bg }}
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}>
-          Leave a Wish ♡
-        </motion.button>
+        {/* MESSAGE / RSVP — wish box */}
+        {(section.type === "message" || section.type === "rsvp") && (
+          <div className="mb-6">
+            <AnimatePresence mode="wait">
+              {!msgSent ? (
+                <motion.div key="form" exit={{ opacity: 0, y: -10 }}>
+                  <textarea value={msgValue} onChange={e => setMsgValue(e.target.value)} rows={4}
+                    placeholder={section.placeholder || "Write your wishes here…"}
+                    className="w-full p-4 text-sm leading-relaxed outline-none resize-none"
+                    style={{ background: `${p.primary}08`, border: `1px solid ${p.primary}30`, color: p.text, borderRadius: 2 }} />
+                  <button onClick={sendMessage}
+                    className="mt-3 w-full py-3.5 text-xs uppercase tracking-[0.25em] transition-all hover:opacity-80"
+                    style={{ background: p.primary, color: p.bg, fontFamily: `'${font}', serif` }}>
+                    {section.submitLabel || "Send with Love ♡"}
+                  </button>
+                </motion.div>
+              ) : (
+                <motion.div key="thanks" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="py-10 text-center">
+                  <div className="text-5xl mb-4">{spec.coverSpec?.thankEmoji || "🕊️"}</div>
+                  <p style={{ fontFamily: `'${font}', serif`, fontSize: "1.4rem", fontStyle: "italic", color: p.primary }}>
+                    Thank you ✦
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* Next button */}
+        {!isLast && !(section.type === "message" || section.type === "rsvp") && (
+          <motion.button onClick={onNext}
+            className="w-full py-3.5 border text-xs uppercase tracking-[0.25em] transition-all hover:opacity-80 mt-2"
+            style={{ borderColor: `${p.primary}40`, color: p.primary, background: "transparent" }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
+            Continue ✦
+          </motion.button>
+        )}
       </motion.div>
     </div>
   );
 }
 
-// ── Message scene ──────────────────────────────────────────────────────────
-function MessageScene({ invitation, spec }: { invitation: Invitation; spec: InvitationSpec }) {
-  const p = spec.palette;
-  const [msg, setMsg] = useState("");
-  const [sent, setSent] = useState(false);
-
-  const send = async () => {
-    if (!msg.trim()) return;
-    await fetch(`/api/rsvp/${invitation.id}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ guestName: "Guest", message: msg, status: "attending" }),
-    }).catch(() => {});
-    setSent(true);
-  };
+// ── Preview mode — all sections in scroll ──────────────────────────────────
+function PreviewMode({ invitation, spec, p, imageUrl }: {
+  invitation: Invitation; spec: Spec; p: ReturnType<typeof getPalette>; imageUrl?: string;
+}) {
+  const font = spec.theme?.fontHeading || "Georgia";
+  const sections = spec.sections || [];
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-16"
-      style={{ background: `radial-gradient(ellipse at 50% 60%, ${p.surface} 0%, ${p.bg} 100%)` }}>
-      <motion.div className="max-w-sm w-full text-center" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="text-4xl mb-4">{spec.messageEmoji || "💌"}</div>
-        <p style={{ fontFamily: `'${spec.fontHeading}', serif`, fontSize: "1.8rem", fontWeight: 300, color: p.text, marginBottom: "0.5rem" }}>
-          {spec.messageTitle || "Leave a Wish"}
-        </p>
-        <p className="text-sm mb-8" style={{ color: p.text, opacity: 0.5 }}>Your words will mean everything to us ♡</p>
-        <AnimatePresence mode="wait">
-          {!sent ? (
-            <motion.div key="form" exit={{ opacity: 0, y: -10 }}>
-              <textarea value={msg} onChange={e => setMsg(e.target.value)} rows={5}
-                placeholder="Write your wishes here…"
-                className="w-full p-4 text-sm leading-relaxed outline-none resize-none"
-                style={{ background: `${p.primary}08`, border: `1px solid ${p.primary}30`, color: p.text, borderRadius: 4 }} />
-              <button onClick={send}
-                className="mt-4 w-full py-4 text-xs uppercase tracking-[0.25em] transition-all hover:opacity-80"
-                style={{ background: p.primary, color: p.bg }}>
-                Send with Love ♡
-              </button>
-            </motion.div>
-          ) : (
-            <motion.div key="thanks" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="py-10">
-              <div className="text-5xl mb-4">{spec.thankEmoji || "🕊️"}</div>
-              <p style={{ fontFamily: `'${spec.fontHeading}', serif`, fontSize: "1.5rem", fontStyle: "italic", color: p.primary }}>
-                Thank you, received with love ✦
-              </p>
-            </motion.div>
+    <div style={{ background: p.bg, color: p.text, minHeight: "100vh" }}>
+      {/* Cover preview */}
+      <div style={{ height: 480, position: "relative", overflow: "hidden" }}>
+        {imageUrl ? (
+          <>
+            <div style={{
+              position: "absolute", inset: 0,
+              backgroundImage: `url(${imageUrl})`,
+              backgroundSize: "cover", backgroundPosition: "center top",
+              filter: "brightness(0.6) saturate(1.4)",
+            }} />
+            <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to bottom, transparent 40%, ${p.bg} 100%)` }} />
+          </>
+        ) : (
+          <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${p.bg}, ${p.surface})` }} />
+        )}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 z-10">
+          <div className="text-4xl mb-3">{spec.theme?.topSymbol || "✦"}</div>
+          <h1 style={{ fontFamily: `'${font}', serif`, fontSize: "clamp(1.8rem,5vw,2.8rem)", fontWeight: 300, color: p.text, lineHeight: 1.1 }}>
+            {invitation.coupleName || invitation.title}
+          </h1>
+          {spec.coverSpec?.tagline && (
+            <p className="mt-3 text-sm italic" style={{ color: p.text, opacity: 0.7, fontFamily: `'${font}', serif` }}>
+              {spec.coverSpec.tagline}
+            </p>
           )}
-        </AnimatePresence>
-      </motion.div>
-      <Petals emoji={spec.petalEmoji} count={15} />
+        </div>
+      </div>
+
+      {/* All sections */}
+      {sections.map((s, i) => (
+        <div key={i} className="px-6 py-6 border-t" style={{ borderColor: `${p.primary}12` }}>
+          {s.heading && (
+            <p className="text-center text-sm mb-3" style={{ fontFamily: `'${font}', serif`, color: p.primary, opacity: 0.8 }}>
+              {s.heading}
+            </p>
+          )}
+          {(s.message || s.quote || s.venueDescription) && (
+            <p className="text-xs text-center leading-relaxed italic" style={{ color: p.text, opacity: 0.7, lineHeight: 1.8 }}>
+              {s.message || s.quote || s.venueDescription}
+            </p>
+          )}
+          {(s.type === "venue" || s.type === "details") && (
+            <div className="mt-3 space-y-1.5">
+              {[s.venueName || invitation.venue, new Date(invitation.eventDate).toLocaleDateString(), s.time].filter(Boolean).map((v, j) => (
+                <p key={j} className="text-xs text-center" style={{ color: p.text, opacity: 0.6 }}>{v}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
 
-// ── Spec type ──────────────────────────────────────────────────────────────
-interface InvitationSpec {
-  palette: { bg: string; surface: string; primary: string; accent: string; text: string };
-  fontHeading: string;
-  petalEmoji: string;
-  topSymbol: string;
-  tagline: string;
-  storyLabel: string;
-  storyEmoji: string;
-  storyText: string;
-  detailsLabel: string;
-  venueIcon: string;
-  messageEmoji: string;
-  messageTitle: string;
-  thankEmoji: string;
-}
+// ── Main component ─────────────────────────────────────────────────────────
+export function CinematicTemplate({ invitation, guestName, imageUrl, isPreview = false }: Props) {
+  // Parse spec from generatedHtml
+  const raw = (invitation as { generatedHtml?: string }).generatedHtml;
+  let spec: Spec = {};
+  try {
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      spec = (parsed.spec || parsed) as Spec;
+    }
+  } catch {}
 
-const DEFAULT_SPEC: InvitationSpec = {
-  palette: { bg: "#0D0B08", surface: "#1A1608", primary: "#C9A84C", accent: "#E8C86A", text: "#FAF7F2" },
-  fontHeading: "Cormorant Garamond",
-  petalEmoji: "🌸",
-  topSymbol: "✦",
-  tagline: "You are cordially invited",
-  storyLabel: "Our Story",
-  storyEmoji: "♥",
-  storyText: "Their journey brought them together in the most beautiful way…",
-  detailsLabel: "The Celebration",
-  venueIcon: "📍",
-  messageEmoji: "💌",
-  messageTitle: "Leave a Wish",
-  thankEmoji: "🕊️",
-};
+  const p = getPalette(spec);
+  const sections = spec.sections || [];
 
-// ── Main template ──────────────────────────────────────────────────────────
-export function CinematicTemplate({ invitation, guestName, imageUrl, imagePrompt, trackingToken: _t, isPreview = false }: Props) {
-  const [scene, setScene] = useState<Scene>(isPreview ? "details" : "cover");
-  const [bgImage, setBgImage] = useState<string | null>(imageUrl || null);
-  const [spec, setSpec] = useState<InvitationSpec>(DEFAULT_SPEC);
-  const audioRef = useRef<AudioContext | null>(null);
-
-  // imageUrl is either base64 (instant) or Pollinations URL (loads in ~5-15s)
-  // Both work as <img src> — browser handles the loading
-  useEffect(() => {
-    if (imageUrl && !bgImage) setBgImage(imageUrl);
-  }, [imageUrl, bgImage]);
-
-  // Parse invitation color palette into spec
-  useEffect(() => {
-    const p = invitation.colorPalette as { bg?: string; background?: string; surface?: string; secondary?: string; primary?: string; accent?: string; text?: string };
-    setSpec(prev => ({
-      ...prev,
-      palette: {
-        bg:      p.bg      || p.background || prev.palette.bg,
-        surface: p.surface || p.secondary  || prev.palette.surface,
-        primary: p.primary || prev.palette.primary,
-        accent:  p.accent  || prev.palette.accent,
-        text:    p.text    || prev.palette.text,
-      },
-    }));
-  }, [invitation.colorPalette]);
+  // Scene navigation — cover + all spec sections
+  const [sceneIdx, setSceneIdx] = useState(-1); // -1 = cover
+  const ctxRef = useRef<AudioContext | null>(null);
 
   const startMusic = () => {
-    if (audioRef.current) return;
+    if (ctxRef.current) return;
     try {
       const ctx = new AudioContext();
-      audioRef.current = ctx;
-      // Simple ambient tone
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.type = "sine"; osc.frequency.value = 220;
-      gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 2);
-      osc.start();
-    } catch { /* ignore */ }
+      ctxRef.current = ctx;
+      const notes = [220, 246.9, 277.2, 329.6, 370, 440];
+      let t = ctx.currentTime + 0.5;
+      function loop() {
+        notes.forEach((f, i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = "triangle"; o.frequency.value = f;
+          o.connect(g); g.connect(ctx.destination);
+          g.gain.setValueAtTime(0, t + i * 0.5);
+          g.gain.linearRampToValueAtTime(0.06, t + i * 0.5 + 0.05);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.5 + 0.8);
+          o.start(t + i * 0.5); o.stop(t + i * 0.5 + 0.85);
+        });
+        t += notes.length * 0.5 + 1;
+        if (ctxRef.current) setTimeout(loop, (notes.length * 0.5 + 1) * 1000);
+      }
+      loop();
+    } catch {}
   };
 
-  const handleOpen = () => { if (!isPreview) startMusic(); setScene("story"); };
+  useEffect(() => () => { ctxRef.current?.close(); }, []);
 
-  // Preview mode: show everything in one scroll
   if (isPreview) {
     return (
-      <div className="text-white" style={{ background: spec.palette.bg }}>
-        {/* Cover preview */}
-        <div style={{ height: 500, position: "relative", overflow: "hidden" }}>
-          {bgImage && (
-            <div className="absolute inset-0"
-              style={{
-                backgroundImage: `url(${bgImage})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center top",
-                filter: "brightness(0.6) saturate(1.4)",
-              }} />
-          )}
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6"
-            style={{ background: bgImage ? `linear-gradient(to bottom, transparent 40%, ${spec.palette.bg}cc 80%, ${spec.palette.bg} 100%)` : `linear-gradient(135deg, ${spec.palette.bg}, ${spec.palette.surface})` }}>
-            <div className="text-4xl mb-3" style={{ filter: "drop-shadow(0 0 10px rgba(255,215,0,0.5))" }}>{spec.topSymbol}</div>
-            <h1 style={{ fontFamily: `'${spec.fontHeading}', serif`, fontSize: "clamp(2rem,6vw,3rem)", fontWeight: 300, color: spec.palette.text, lineHeight: 1.1 }}>
-              {invitation.coupleName?.includes("&") ? (
-                <>
-                  {invitation.coupleName.split("&")[0].trim()}
-                  <em style={{ display: "block", color: spec.palette.primary, fontSize: "0.55em", fontStyle: "normal" }}>✦ & ✦</em>
-                  {invitation.coupleName.split("&")[1].trim()}
-                </>
-              ) : invitation.coupleName || invitation.title}
-            </h1>
-            <p className="mt-3 text-sm italic" style={{ color: spec.palette.text, opacity: 0.7, fontFamily: `'${spec.fontHeading}', serif` }}>{spec.tagline}</p>
-          </div>
-        </div>
-        {/* Story */}
-        <div className="px-6 py-8 text-center border-t" style={{ borderColor: `${spec.palette.primary}20`, background: spec.palette.surface }}>
-          <p className="text-xs uppercase tracking-[0.3em] mb-3" style={{ color: spec.palette.primary, opacity: 0.7 }}>{spec.storyLabel}</p>
-          <p className="text-base leading-relaxed italic" style={{ fontFamily: `'${spec.fontHeading}', serif`, color: spec.palette.text, opacity: 0.85 }}>{spec.storyText}</p>
-        </div>
-        {/* Details */}
-        <div className="px-6 py-6">
-          <p className="text-xs uppercase tracking-[0.3em] text-center mb-4" style={{ color: spec.palette.primary, opacity: 0.7 }}>✦ {spec.detailsLabel} ✦</p>
-          {[
-            { icon: "📅", label: "Date", value: new Date(invitation.eventDate).toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) },
-            { icon: "🕐", label: "Time", value: new Date(invitation.eventDate).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) },
-            { icon: spec.venueIcon, label: "Venue", value: invitation.venue },
-          ].map(row => (
-            <div key={row.label} className="flex gap-3 items-center py-3 border-b" style={{ borderColor: `${spec.palette.primary}15` }}>
-              <span className="text-xl">{row.icon}</span>
-              <div>
-                <p className="text-xs uppercase tracking-[0.1em]" style={{ color: spec.palette.primary, opacity: 0.6 }}>{row.label}</p>
-                <p style={{ fontFamily: `'${spec.fontHeading}', serif`, color: spec.palette.text }}>{row.value}</p>
-              </div>
-            </div>
-          ))}
+      <div style={{ background: p.bg }}>
+        <Background imageUrl={imageUrl} p={p} />
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <PreviewMode invitation={invitation} spec={spec} p={p} imageUrl={imageUrl} />
         </div>
       </div>
     );
   }
 
-  // Live invitation — cinematic scene-by-scene
   return (
-    <div className="bg-[#0a0a0a] text-white" style={{ minHeight: "100dvh" }}>
+    <div className="relative" style={{ background: p.bg, minHeight: "100dvh" }} dir={spec.theme?.direction || "ltr"}>
+      <Background imageUrl={imageUrl} p={p} />
+      <Petals emoji={spec.theme?.petalEmoji || "🌸"} />
+
+      {/* Scene navigation dots */}
+      {sceneIdx >= 0 && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex gap-1.5">
+          {[-1, ...sections.map((_, i) => i)].map((idx) => (
+            <button key={idx}
+              className="transition-all rounded-full"
+              style={{
+                width: sceneIdx === idx ? 20 : 6,
+                height: 6,
+                background: sceneIdx === idx ? p.primary : `${p.primary}40`,
+                border: "none",
+              }}
+              onClick={() => setSceneIdx(idx)} />
+          ))}
+        </div>
+      )}
+
       <AnimatePresence mode="wait">
-        {scene === "cover" && (
-          <motion.div key="cover" className="fixed inset-0 z-10"
-            exit={{ opacity: 0, scale: 1.05 }} transition={{ duration: 0.6 }}>
-            <CoverScene invitation={invitation} guestName={guestName} bgImage={bgImage} onOpen={handleOpen} spec={spec} />
+        {sceneIdx === -1 ? (
+          <motion.div key="cover"
+            exit={{ opacity: 0, scale: 1.05 }} transition={{ duration: 0.5 }}>
+            <CoverScene
+              invitation={invitation} guestName={guestName}
+              spec={spec} p={p}
+              onOpen={() => { startMusic(); setSceneIdx(0); }}
+            />
           </motion.div>
-        )}
-        {scene === "story" && (
-          <motion.div key="story" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <StoryScene invitation={invitation} spec={spec} onNext={() => setScene("details")} />
-          </motion.div>
-        )}
-        {scene === "details" && (
-          <motion.div key="details" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <DetailsScene invitation={invitation} spec={spec} onNext={() => setScene("message")} />
-          </motion.div>
-        )}
-        {scene === "message" && (
-          <motion.div key="message" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}>
-            <MessageScene invitation={invitation} spec={spec} />
+        ) : (
+          <motion.div key={`section-${sceneIdx}`}
+            initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.6 }}>
+            {sections[sceneIdx] && (
+              <SectionView
+                section={sections[sceneIdx]}
+                spec={spec} p={p}
+                invitation={invitation} guestName={guestName}
+                onNext={() => setSceneIdx(i => Math.min(i + 1, sections.length - 1))}
+                isLast={sceneIdx === sections.length - 1}
+              />
+            )}
           </motion.div>
         )}
       </AnimatePresence>

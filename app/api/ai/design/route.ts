@@ -3,139 +3,153 @@ import { db } from "@/lib/db/client";
 import { generateWithFallback, extractJSON } from "@/lib/ai/gemini";
 import { generateSceneImage, buildPollinationsUrl } from "@/lib/ai/imagen";
 
-const SPEC_PROMPT = `You are a world-class wedding invitation creative director and visual artist.
-The user describes a wedding theme. You return a JSON spec for a cinematic invitation.
-Think: Makoto Shinkai films, Studio Ghibli atmosphere, luxury editorial design.
-Be ULTRA specific about colors, fonts, atmosphere. Make every detail intentional.
+// ── System prompt — creative director ─────────────────────────────────────
+const SYSTEM_PROMPT = `You are a world-class wedding invitation creative director and visual artist.
+Think: Makoto Shinkai films, Studio Ghibli atmosphere, luxury editorial design, high-end wedding magazines.
+You receive a detailed brief from the user describing their theme, sections, and content.
+Your job: generate a complete, deeply personalized JSON design spec.
 
-Return ONLY valid JSON:
+CRITICAL RULES:
+- Be ULTRA specific — no generic output
+- Every text field must match the theme language and atmosphere
+- The imagePrompt must be 120-180 words, extremely vivid, NO text/letters/words in image
+- Generate EXACTLY the sections the user requests, in that order
+- All text must be in the requested language
+- {{GUEST_NAME}} placeholder: use ONLY in guest section message, nowhere else
+
+Return ONLY valid JSON with this structure:
 
 {
   "theme": {
-    "name": "Evocative theme name (e.g. Sakura Shinobi, Saharan Gold, Midnight Jasmine)",
+    "name": "Evocative theme name",
     "palette": {
-      "bg": "#hex — deep atmospheric background matching the scene",
-      "surface": "#hex — slightly lighter, for cards/overlays",
-      "primary": "#hex — hero accent color (gold, jade, crimson, etc.)",
-      "accent": "#hex — secondary color for highlights",
-      "text": "#hex — main text (usually near-white or warm cream)",
-      "textMuted": "#hex — subtle text"
+      "bg": "#hex dark atmospheric background",
+      "surface": "#hex slightly lighter surface",
+      "primary": "#hex hero accent (gold/crimson/jade/etc)",
+      "accent": "#hex secondary highlight",
+      "text": "#hex main text color",
+      "textMuted": "#hex subtle text"
     },
-    "fontHeading": "Most fitting Google Font for the theme (e.g. Amiri, Cinzel, Noto Serif JP, Playfair Display, Scheherazade New, Dancing Script)",
-    "fontBody": "Clean readable Google Font (e.g. Jost, Raleway, Nunito, DM Sans)",
+    "fontHeading": "Google Font — pick perfectly for theme (Amiri, Cinzel, Noto Serif JP, Scheherazade New, Playfair Display, Cormorant Garamond, Dancing Script, etc)",
+    "fontBody": "Clean Google Font (Jost, Raleway, DM Sans, Nunito)",
     "direction": "ltr or rtl",
-    "patternStyle": "arabesque | sakura | stars | geometric | floral | calligraphy | celestial | bamboo | wave"
+    "petalEmoji": "Floating particle emoji matching theme 🌸 ❄️ 🍂 ✨ 🌟 ⚡ 🌺",
+    "topSymbol": "Theme symbol/emoji for cover ✦ 🌸 ⚔️ 🕌 🏯 ❋ 🌙"
   },
-  "imagePrompt": "CRITICAL: Write a 100-180 word image generation prompt. NO text/words/letters in image. Structure: [Art style] + [Detailed scene description] + [Specific lighting] + [Atmosphere] + [Visual elements from theme] + [Color palette] + [Quality: masterpiece, ultra-detailed, cinematic, 8k, beautiful, emotional]. Characters from behind only, no faces. Be EXTREMELY specific and vivid. Example for Japanese theme: anime cinematic illustration, ancient Japanese village at twilight, paper lanterns glowing orange against purple sky, cherry blossoms swirling, stone bridge over misty river, two silhouettes from behind, Makoto Shinkai style, volumetric god rays, ultra-detailed, masterpiece",
+  "imagePrompt": "120-180 word vivid scene description for AI image generation. NO text, NO words, NO letters. Structure: [Art style e.g. anime cinematic / oil painting / digital art] + [Main scene with rich details] + [Lighting: golden hour / moonlit / lantern glow / etc] + [Atmosphere and mood] + [Specific thematic visual elements] + [Two silhouettes from behind if people present] + [Color palette description] + masterpiece, ultra-detailed, 8k, cinematic composition, emotionally evocative, beautiful",
   "coverSpec": {
-    "topSymbol": "Most fitting emoji or symbol for the theme (e.g. 🍒 🌙 ⚔️ 🌸 🕌 ✦ 🏮 🌺)",
-    "petalEmoji": "Floating particle emoji matching theme (e.g. 🌸 ❄️ 🍂 ✨ 🌟 💫 🌺)",
-    "tagline": "Short poetic invitation line (max 8 words, theme-specific)",
-    "storyLabel": "Label for story section (e.g. Our Journey, The Mission, Our Path)",
-    "storyEmoji": "Story section emoji (e.g. ♥ ⚔️ 🌙 🌸)",
-    "storyText": "2-3 sentences of romantic poetic story about the couple, deeply inspired by the theme. No {{GUEST_NAME}}.",
-    "detailsLabel": "Label for details section (e.g. The Ceremony, The Mission Briefing, The Grand Celebration)",
-    "venueIcon": "Emoji for venue that fits theme (e.g. 🏯 🕌 🌴 ⛩️ 🏰 🌹)",
-    "messageEmoji": "Message section emoji",
-    "messageTitle": "Title for message section (e.g. Leave a Wish, Your Blessing, Send Your Love)",
-    "thankEmoji": "Thank you emoji"
-  },
-  "envelope": {
-    "sealSymbol": "Theme-appropriate seal symbol",
-    "sealColor": "#hex matching primary",
-    "openingEffect": "cherry_blossoms | gold_sparks | stars | rose_petals | fireflies | snow | leaves"
+    "tagline": "Short poetic line max 8 words matching theme language",
+    "storyLabel": "Section label e.g. Our Journey / The Mission / Notre Histoire",
+    "storyText": "2-3 poetic sentences about the couple inspired by theme. Romantic and specific. No {{GUEST_NAME}}.",
+    "detailsLabel": "Event details label matching theme e.g. The Grand Celebration / La Cérémonie",
+    "venueIcon": "Venue emoji fitting theme 🏯 🕌 🏰 🌴 ⛩️ 🌹",
+    "messageTitle": "Wish section title e.g. Leave a Wish / Send Your Blessing",
+    "thankEmoji": "Thank you emoji 🕊️ 🌸 ⚔️ etc"
   },
   "sections": [
-    {
-      "type": "hero",
-      "layout": "cinematic",
-      "heading": "Main heading — couple names or theme title",
-      "subheading": "Date line or venue teaser",
-      "quote": "Poetic quote deeply inspired by the theme (2 lines max)",
-      "animation": "fadeIn"
-    },
-    {
-      "type": "welcome",
-      "heading": "Welcome heading in theme language",
-      "message": "Warm 2-3 sentence welcome from couple to guests. Theme-specific language. No {{GUEST_NAME}}."
-    },
-    {
-      "type": "guest",
-      "heading": "Personal greeting heading",
-      "message": "Personal message to {{GUEST_NAME}} — use exactly this placeholder once."
-    },
-    {
-      "type": "venue",
-      "heading": "Venue section heading",
-      "venueName": "Venue display name",
-      "venueDescription": "1-2 sentences describing the venue atmosphere in the theme's language",
-      "time": "Event time",
-      "dresscode": "Optional dress code suggestion matching theme (e.g. Traditional Japanese, White & Gold, Ninja-inspired elegance)"
-    },
-    {
-      "type": "message",
-      "heading": "Message section heading",
-      "placeholder": "Placeholder text for message input, theme-specific",
-      "submitLabel": "Submit button text, theme-specific (e.g. Send with Love ♡, Deliver the Scroll, Cast the Spell)"
-    }
+    // Generate EXACTLY the sections the user requested
+    // Each section type has specific fields:
+    //
+    // type "hero": { type, heading, subheading, quote }
+    // type "welcome": { type, heading, message }
+    // type "story": { type, heading, message }
+    // type "guest": { type, heading, message (use {{GUEST_NAME}} once) }
+    // type "venue": { type, heading, venueName, venueDescription, time, dresscode }
+    // type "countdown": { type, heading }
+    // type "rsvp": { type, heading, placeholder, submitLabel }
+    // type "message": { type, heading, placeholder, submitLabel }
+    // type "dresscode": { type, heading, message }
+    // type "custom": { type, heading, message }
+    //
+    // All text in the requested language. Deep theme integration.
   ]
-}`;`;
-`;
+}`;
 
+// ── Route ──────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
   try { body = await req.json(); }
   catch { return NextResponse.json({ detail: "Invalid body" }, { status: 400 }); }
 
   const {
-    invitationId, coupleName, eventDate, venue,
-    language = "en", style = "luxury",
-    culturalBackground = "", additionalDetails = "",
-    guestName = "",
+    invitationId,
+    coupleName    = "The Couple",
+    eventDate     = new Date().toISOString(),
+    venue         = "A Beautiful Venue",
+    language      = "en",
+    style         = "luxury",
+    culturalBackground = "",
+    additionalDetails  = "",
+    guestName          = "",
   } = body as Record<string, string>;
 
-  const userPrompt = `
-Wedding details:
-- Couple: ${coupleName}
-- Date: ${new Date(eventDate).toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric" })}
-- Venue: ${venue}
-- Cultural background: ${culturalBackground || style}
-- Language: ${language}
-- Additional details: ${additionalDetails}
-- Guest name: ${guestName || "Guest"}
+  // ── Build the user prompt — additionalDetails IS the main prompt ──────
+  const langLabel = language === "ar" ? "Arabic (RTL)" : language === "fr" ? "French" : "English";
+  const dateLabel = (() => {
+    try { return new Date(eventDate).toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric" }); }
+    catch { return eventDate; }
+  })();
 
-Based on this, generate a detailed design specification JSON.
-Make the design deeply authentic to the cultural background.
-For Tunisian/Arabic: use Amiri or Scheherazade New font, arabesque patterns, warm gold and blue palette, RTL if Arabic language.
-All section texts should be in the specified language (${language}).
-`;
+  const userPrompt = `
+═══════════════════════════════════════
+WEDDING INVITATION BRIEF
+═══════════════════════════════════════
+
+COUPLE: ${coupleName}
+DATE: ${dateLabel}
+VENUE: ${venue}
+LANGUAGE: ${langLabel}
+STYLE: ${style}${culturalBackground ? ` — ${culturalBackground}` : ""}
+${guestName ? `GUEST NAME EXAMPLE: ${guestName}` : ""}
+
+═══════════════════════════════════════
+THEME & SECTIONS REQUESTED BY USER:
+═══════════════════════════════════════
+
+${additionalDetails || `Create a beautiful ${style} wedding invitation with:
+- A stunning cover with couple names
+- Romantic love story section  
+- Personalized guest greeting using {{GUEST_NAME}}
+- Event details with venue and date
+- Guest wish/message section`}
+
+═══════════════════════════════════════
+INSTRUCTIONS:
+═══════════════════════════════════════
+1. Read the user's theme description and sections carefully
+2. Generate imagePrompt that perfectly captures the visual atmosphere described
+3. Create sections EXACTLY as requested — same order, same types
+4. Write all text in ${langLabel}
+5. Make EVERY detail deeply specific to this theme — no generic wedding text
+6. The imagePrompt MUST have NO text/letters/words in the image
+`.trim();
 
   try {
-    const raw  = await generateWithFallback(`${SPEC_PROMPT}\n\n${userPrompt}`, { temperature: 1.0 });
+    const raw  = await generateWithFallback(
+      `${SYSTEM_PROMPT}\n\n${userPrompt}`,
+      { temperature: 1.0 }
+    );
     const data = extractJSON(raw) as { imagePrompt?: string; [key: string]: unknown };
 
-    // Generate background image URL using Pollinations.ai Flux model
-    // (Imagen 3 requires Vertex AI service account, not API key)
+    // Generate background image
     let imageData: string | null = null;
     let pollinationsUrl: string | null = null;
 
     if (data.imagePrompt) {
-      imageData = await generateSceneImage(data.imagePrompt); // returns null (Vertex AI needed)
-      pollinationsUrl = buildPollinationsUrl(data.imagePrompt); // always works in browser
+      imageData       = await generateSceneImage(data.imagePrompt);
+      pollinationsUrl = buildPollinationsUrl(data.imagePrompt);
     }
 
-    // Save directly to DB so invitation page picks it up immediately
-    // Extract color palette from spec for invitation theming
-    const specTheme = (data as { theme?: { palette?: Record<string, string> } }).theme;
-    const palette = specTheme?.palette;
+    // Extract palette and save to DB
+    const palette = (data as { theme?: { palette?: Record<string, string> } }).theme?.palette;
 
     const generatedHtml = JSON.stringify({
-      __cinematic: true,
-      __spec:      true,
-      spec:        data,
-      imageData:   imageData       || null,
+      __cinematic:    true,
+      __spec:         true,
+      spec:           data,
+      imageData:      imageData       || null,
       pollinationsUrl: pollinationsUrl || null,
-      imagePrompt: data.imagePrompt || null,
+      imagePrompt:    data.imagePrompt || null,
     });
 
     if (invitationId) {
@@ -153,19 +167,19 @@ All section texts should be in the specified language (${language}).
             },
           } : {}),
         },
-      }).catch((e: unknown) => console.warn("DB save failed:", e));
+      }).catch((e: unknown) => console.warn("DB save:", e));
     }
 
     return NextResponse.json({
-      spec: data,
-      imageData,
-      pollinationsUrl,
-      imagePrompt: data.imagePrompt,
-      generatedHtml,
-      invitationId, coupleName, eventDate, venue, guestName,
+      spec: data, imageData, pollinationsUrl,
+      imagePrompt: data.imagePrompt, generatedHtml,
+      invitationId, coupleName, eventDate, venue,
     });
+
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Design generation failed";
-    return NextResponse.json({ detail: msg }, { status: 500 });
+    return NextResponse.json(
+      { detail: err instanceof Error ? err.message : "Generation failed" },
+      { status: 500 }
+    );
   }
 }
