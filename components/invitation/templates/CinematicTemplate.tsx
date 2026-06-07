@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Invitation } from "@/types";
+import { GeneratedBackground } from "./GeneratedBackground";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface SpecSection {
@@ -61,26 +62,65 @@ function getPalette(spec: Spec) {
 }
 
 // ── Background ─────────────────────────────────────────────────────────────
-function Background({ imageUrl, p }: { imageUrl?: string; p: ReturnType<typeof getPalette> }) {
+function Background({ imageUrl, spec, p }: {
+  imageUrl?: string;
+  spec: Spec;
+  p: ReturnType<typeof getPalette>;
+}) {
+  const [loaded,  setLoaded]  = useState(false);
+  const [errored, setErrored] = useState(false);
+
   return (
     <div className="fixed inset-0 z-0">
-      {imageUrl ? (
+      {/* Base gradient always visible */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: `linear-gradient(135deg, ${p.bg} 0%, ${p.surface} 40%, ${p.bg} 100%)`,
+      }} />
+
+      {/* Canvas-generated background — instant, no network */}
+      <GeneratedBackground spec={spec} />
+
+      {/* Real image fades in over canvas when loaded */}
+      {imageUrl && !errored && (
         <>
-          <div style={{
-            position: "absolute", inset: 0,
-            backgroundImage: `url(${imageUrl})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center top",
-            filter: "brightness(0.55) saturate(1.4) contrast(1.05)",
-          }} />
-          <div style={{
-            position: "absolute", inset: 0,
-            background: `linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 25%, ${p.bg}80 60%, ${p.bg}ee 85%, ${p.bg} 100%)`,
-          }} />
+          <img src={imageUrl} alt="" className="sr-only"
+            onLoad={() => setLoaded(true)}
+            onError={() => setErrored(true)} />
+          {loaded && (
+            <motion.div className="absolute inset-0"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 2 }}>
+              <div style={{
+                position: "absolute", inset: 0,
+                backgroundImage: `url(${imageUrl})`,
+                backgroundSize: "cover", backgroundPosition: "center top",
+                filter: "brightness(0.6) saturate(1.4) contrast(1.05)",
+              }} />
+            </motion.div>
+          )}
+          {/* Loading dots while waiting */}
+          {!loaded && (
+            <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center gap-3 z-10">
+              <motion.div className="flex gap-1.5"
+                animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}>
+                {[0, 1, 2].map(i => (
+                  <motion.div key={i} className="w-1.5 h-1.5 rounded-full" style={{ background: p.primary }}
+                    animate={{ y: [0, -8, 0] }}
+                    transition={{ duration: 0.8, delay: i * 0.15, repeat: Infinity }} />
+                ))}
+              </motion.div>
+              <p className="text-xs uppercase tracking-[0.3em]" style={{ color: p.primary, opacity: 0.4 }}>
+                Loading HD scene…
+              </p>
+            </div>
+          )}
         </>
-      ) : (
-        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${p.bg} 0%, ${p.surface} 50%, ${p.bg} 100%)` }} />
       )}
+
+      {/* Gradient overlay for text readability */}
+      <div className="absolute inset-0" style={{
+        background: `linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0) 25%, ${p.bg}70 60%, ${p.bg}ee 85%, ${p.bg} 100%)`,
+      }} />
     </div>
   );
 }
@@ -501,7 +541,7 @@ export function CinematicTemplate({ invitation, guestName, imageUrl, isPreview =
   if (isPreview) {
     return (
       <div style={{ background: p.bg }}>
-        <Background imageUrl={finalImageUrl} p={p} />
+        <Background imageUrl={finalImageUrl} spec={spec} p={p} />
         <div style={{ position: "relative", zIndex: 1 }}>
           <PreviewMode invitation={invitation} spec={spec} p={p} imageUrl={finalImageUrl} />
         </div>
@@ -511,7 +551,7 @@ export function CinematicTemplate({ invitation, guestName, imageUrl, isPreview =
 
   return (
     <div className="relative" style={{ background: p.bg, minHeight: "100dvh" }} dir={spec.theme?.direction || "ltr"}>
-      <Background imageUrl={finalImageUrl} p={p} />
+      <Background imageUrl={finalImageUrl} spec={spec} p={p} />
       <Petals emoji={spec.theme?.petalEmoji || "🌸"} />
 
       {/* Scene navigation dots */}
