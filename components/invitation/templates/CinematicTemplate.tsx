@@ -64,18 +64,28 @@ function CoverScene({ invitation, guestName, bgImage, onOpen, spec }: {
       onClick={handleTap}
       style={{ background: bgImage ? "transparent" : `linear-gradient(135deg, ${p.bg} 0%, #050402 100%)` }}>
 
-      {/* Background image — handles both base64 and slow Pollinations URLs */}
+      {/* Background image — CSS background-image scales perfectly at all screen sizes */}
       {bgImage && (
         <div className="absolute inset-0">
-          <img
-            src={bgImage}
-            alt=""
-            className="w-full h-full object-cover transition-opacity duration-1000"
-            style={{ filter: "brightness(0.55) saturate(1.3)" }}
-            onLoad={e => { (e.target as HTMLImageElement).style.opacity = "1"; }}
-            onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-          <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, transparent 30%, ${p.bg}99 70%, ${p.bg} 100%)` }} />
+          <div className="absolute inset-0 transition-opacity duration-1000"
+            style={{
+              backgroundImage: `url(${bgImage})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center top",
+              backgroundRepeat: "no-repeat",
+              filter: "brightness(0.6) saturate(1.4) contrast(1.05)",
+            }} />
+          {/* Gradient overlay — stronger at bottom for text readability */}
+          <div className="absolute inset-0" style={{
+            background: `linear-gradient(
+              to bottom,
+              rgba(0,0,0,0.1) 0%,
+              rgba(0,0,0,0.05) 30%,
+              ${p.bg}88 60%,
+              ${p.bg}dd 80%,
+              ${p.bg} 100%
+            )`
+          }} />
         </div>
       )}
 
@@ -390,9 +400,13 @@ export function CinematicTemplate({ invitation, guestName, imageUrl, imagePrompt
         {/* Cover preview */}
         <div style={{ height: 500, position: "relative", overflow: "hidden" }}>
           {bgImage && (
-            <img src={bgImage} alt="" className="w-full h-full object-cover object-top"
-              style={{ filter: "brightness(0.6) saturate(1.3)" }}
-              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            <div className="absolute inset-0"
+              style={{
+                backgroundImage: `url(${bgImage})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center top",
+                filter: "brightness(0.6) saturate(1.4)",
+              }} />
           )}
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6"
             style={{ background: bgImage ? `linear-gradient(to bottom, transparent 40%, ${spec.palette.bg}cc 80%, ${spec.palette.bg} 100%)` : `linear-gradient(135deg, ${spec.palette.bg}, ${spec.palette.surface})` }}>

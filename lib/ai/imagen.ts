@@ -15,11 +15,11 @@ export function buildPollinationsUrl(prompt: string): string {
   // flux-pro gives much better quality than base flux
   // width/height at 768x1366 (9:16) balances quality vs load time
   const params = new URLSearchParams({
-    width:   "768",
-    height:  "1366",
-    model:   "flux-pro",    // Higher quality than base flux
+    width:   "1080",         // Full HD width — scales down for mobile, fills desktop
+    height:  "1920",         // Full HD portrait height
+    model:   "flux-pro",     // Best quality model
     nologo:  "true",
-    enhance: "true",        // Auto-enhance prompt
+    enhance: "true",
     seed:    String(seed),
   });
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params}`;
