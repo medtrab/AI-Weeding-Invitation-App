@@ -1,52 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const maxDuration = 60;
+
 export async function GET(_req: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "GEMINI_API_KEY not set" });
 
-  const testPrompt = "A beautiful sunset over mountains, romantic cinematic atmosphere";
-  const results: Record<string, string> = {
-    apiKeyPrefix: apiKey.slice(0, 8) + "...",
-  };
+  const prompt = "A beautiful romantic sunset over Mediterranean sea, cinematic, two silhouettes";
+  const results: Record<string, string> = { apiKeyPrefix: apiKey.slice(0, 10) + "..." };
 
-  // Test 1: Imagen 3 via Generative Language API
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instances: [{ prompt: testPrompt }],
-          parameters: { sampleCount: 1, aspectRatio: "1:1" },
-        }),
-      }
-    );
-    const text = await res.text();
-    results["imagen3_genai"] = `HTTP ${res.status}: ${text.slice(0, 400)}`;
-  } catch (e) { results["imagen3_genai"] = `FAIL: ${e}`; }
+  // Test every possible Gemini image model
+  const models = [
+    "gemini-2.0-flash-preview-image-generation",
+    "gemini-2.0-flash-exp-image-generation",
+    "gemini-2.0-flash-exp",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+  ];
 
-  // Test 2: Gemini 2.0 Flash with image output
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `Create an image of: ${testPrompt}` }] }],
-          generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
-        }),
-      }
-    );
-    const text = await res.text();
-    const hasImage = text.includes("inlineData") || text.includes("image");
-    results["gemini_flash_image"] = `HTTP ${res.status}: hasImage=${hasImage}: ${text.slice(0, 300)}`;
-  } catch (e) { results["gemini_flash_image"] = `FAIL: ${e}`; }
+  for (const model of models) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+          }),
+          signal: AbortSignal.timeout(15000),
+        }
+      );
+      const text = await res.text();
+      const hasImage = text.includes("inlineData");
+      results[model] = `HTTP ${res.status} | hasImage=${hasImage} | ${text.slice(0, 150)}`;
+    } catch (e) {
+      results[model] = `FAIL: ${e instanceof Error ? e.message : e}`;
+    }
+  }
 
-  // Test 3: Pollinations URL (just check if it's being generated)
-  const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(testPrompt)}?width=512&height=512&model=flux`;
-  results["pollinations_url"] = pollinationsUrl;
-
-  return NextResponse.json(results, { status: 200 });
+  return NextResponse.json(results);
 }
