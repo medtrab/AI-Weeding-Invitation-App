@@ -446,12 +446,24 @@ export function CinematicTemplate({ invitation, guestName, imageUrl, isPreview =
   // Parse spec from generatedHtml
   const raw = (invitation as { generatedHtml?: string }).generatedHtml;
   let spec: Spec = {};
+  let rawPollinationsUrl = imageUrl;
   try {
     if (raw) {
       const parsed = JSON.parse(raw);
       spec = (parsed.spec || parsed) as Spec;
+      // Use proxy for Pollinations URLs (avoids rate limit & caches result)
+      if (parsed.pollinationsUrl && !parsed.imageData) {
+        rawPollinationsUrl = `/api/image-proxy?url=${encodeURIComponent(parsed.pollinationsUrl)}`;
+      } else if (parsed.imageData) {
+        rawPollinationsUrl = parsed.imageData;
+      }
     }
   } catch {}
+
+  // Use proxy URL if imageUrl is a Pollinations URL
+  const finalImageUrl = imageUrl?.startsWith("https://image.pollinations.ai/")
+    ? `/api/image-proxy?url=${encodeURIComponent(imageUrl)}`
+    : imageUrl || rawPollinationsUrl;
 
   const p = getPalette(spec);
   const sections = spec.sections || [];
@@ -489,9 +501,9 @@ export function CinematicTemplate({ invitation, guestName, imageUrl, isPreview =
   if (isPreview) {
     return (
       <div style={{ background: p.bg }}>
-        <Background imageUrl={imageUrl} p={p} />
+        <Background imageUrl={finalImageUrl} p={p} />
         <div style={{ position: "relative", zIndex: 1 }}>
-          <PreviewMode invitation={invitation} spec={spec} p={p} imageUrl={imageUrl} />
+          <PreviewMode invitation={invitation} spec={spec} p={p} imageUrl={finalImageUrl} />
         </div>
       </div>
     );
@@ -499,7 +511,7 @@ export function CinematicTemplate({ invitation, guestName, imageUrl, isPreview =
 
   return (
     <div className="relative" style={{ background: p.bg, minHeight: "100dvh" }} dir={spec.theme?.direction || "ltr"}>
-      <Background imageUrl={imageUrl} p={p} />
+      <Background imageUrl={finalImageUrl} p={p} />
       <Petals emoji={spec.theme?.petalEmoji || "🌸"} />
 
       {/* Scene navigation dots */}

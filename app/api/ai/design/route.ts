@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const maxDuration = 60; // seconds — needed for image pre-fetch
 import { db } from "@/lib/db/client";
 import { generateWithFallback, extractJSON } from "@/lib/ai/gemini";
-import { buildPollinationsUrl } from "@/lib/ai/imagen";
+import { generateSceneImage, buildPollinationsUrl } from "@/lib/ai/imagen";
 
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
@@ -114,30 +114,17 @@ CRITICAL RULES:
     const raw  = await generateWithFallback(prompt, { temperature: 0.95 });
     const data = extractJSON(raw) as { imagePrompt?: string; theme?: { palette?: Record<string,string> }; [key: string]: unknown };
 
-    // Generate image URL
-    const pollinationsUrl = data.imagePrompt ? buildPollinationsUrl(data.imagePrompt) : null;
-    
-    // Pre-fetch the image server-side so it's ready when invitation opens
-    // Store as base64 to avoid browser loading delay
+    // Try Gemini native image generation first (best quality, no rate limit issues)
+    // Falls back to Pollinations URL (loaded via proxy)
     let imageData: string | null = null;
-    if (pollinationsUrl) {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 25000); // 25s timeout
-        const imgRes = await fetch(pollinationsUrl, {
-          signal: controller.signal,
-          headers: { "User-Agent": "Mozilla/5.0 (compatible; WeddingInvitation/1.0)" },
-        });
-        clearTimeout(timeout);
-        if (imgRes.ok) {
-          const contentType = imgRes.headers.get("content-type") || "image/jpeg";
-          const buffer = await imgRes.arrayBuffer();
-          const base64 = Buffer.from(buffer).toString("base64");
-          imageData = `data:${contentType};base64,${base64}`;
-          console.log(`Image pre-fetched: ${Math.round(buffer.byteLength / 1024)}KB`);
-        }
-      } catch (imgErr) {
-        console.warn("Image pre-fetch failed (will load client-side):", imgErr instanceof Error ? imgErr.message : imgErr);
+    const pollinationsUrl = data.imagePrompt ? buildPollinationsUrl(data.imagePrompt) : null;
+
+    if (data.imagePrompt) {
+      imageData = await generateSceneImage(data.imagePrompt);
+      if (imageData) {
+        console.log("✅ Using Gemini-generated image (base64)");
+      } else {
+        console.log("⚠️ Gemini image failed, using Pollinations URL via proxy");
       }
     }
 

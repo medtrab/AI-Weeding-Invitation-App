@@ -1,23 +1,64 @@
 // Image generation for wedding invitations
-// Uses Pollinations.ai Flux model (free, no API key, excellent quality)
-// Imagen 3 requires Vertex AI service account credentials (not API key)
+// Strategy:
+// 1. Try Gemini 2.0 Flash experimental image generation (native, best quality)
+// 2. Fall back to Pollinations.ai Flux Pro (good quality, via server proxy)
 
-export async function generateSceneImage(_prompt: string): Promise<string | null> {
-  // Imagen 3 via generativelanguage.googleapis.com is NOT supported with API keys
-  // It requires Vertex AI service account credentials
-  // Return null to trigger Pollinations fallback
-  return null;
+export async function generateSceneImage(prompt: string): Promise<string | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  // Try Gemini imagen via the new gemini-2.0-flash-preview-image-generation model
+  const models = [
+    "gemini-2.0-flash-preview-image-generation",
+    "gemini-2.0-flash-exp",
+  ];
+
+  for (const model of models) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `Generate a high-quality image: ${prompt}` }] }],
+            generationConfig: { responseModalities: ["IMAGE"] },
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.text();
+        console.warn(`Gemini image (${model}) failed:`, err.slice(0, 100));
+        continue;
+      }
+
+      const data = await res.json() as {
+        candidates?: Array<{
+          content?: { parts?: Array<{ inlineData?: { mimeType: string; data: string } }> }
+        }>
+      };
+
+      const part = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+      if (part?.inlineData) {
+        console.log(`✅ Gemini image generated via ${model}`);
+        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+      }
+    } catch (err) {
+      console.warn(`Gemini image (${model}) error:`, err instanceof Error ? err.message : err);
+    }
+  }
+
+  return null; // Fall back to Pollinations
 }
 
-// Build a Pollinations.ai URL — higher quality settings
+// Build a Pollinations.ai URL — high quality settings
 export function buildPollinationsUrl(prompt: string): string {
   const seed = Math.floor(Math.random() * 999999) + 1;
-  // flux-pro gives much better quality than base flux
-  // width/height at 768x1366 (9:16) balances quality vs load time
   const params = new URLSearchParams({
-    width:   "1080",         // Full HD width — scales down for mobile, fills desktop
-    height:  "1920",         // Full HD portrait height
-    model:   "flux-pro",     // Best quality model
+    width:   "1080",
+    height:  "1920",
+    model:   "flux-pro",
     nologo:  "true",
     enhance: "true",
     seed:    String(seed),
@@ -25,37 +66,25 @@ export function buildPollinationsUrl(prompt: string): string {
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params}`;
 }
 
-// Alternative: build a URL using a different free service as backup
-export function buildBackupImageUrl(prompt: string): string {
-  // Lexica Aperture — high quality, free
-  const seed = Math.floor(Math.random() * 999999) + 1;
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=768&height=1366&model=flux-realism&nologo=true&seed=${seed}`;
-}
-
-// Generate a highly optimized image prompt for maximum visual quality
+// Generate an optimized image prompt for maximum visual quality
 export async function generateImagePrompt(themeDescription: string, coupleName: string): Promise<string> {
   const { generateWithFallback } = await import("./gemini");
 
-  const prompt = `You are an expert AI image prompt engineer. Create a stunning image generation prompt for a wedding invitation background.
+  const prompt = `You are an expert AI image prompt engineer for wedding invitations.
+Convert this wedding theme into a vivid image generation prompt.
 
-Theme description: ${themeDescription}
+Theme: ${themeDescription}
 Couple: ${coupleName}
 
-CRITICAL RULES:
-- ABSOLUTELY NO text, words, letters, numbers, or writing in the image
-- Portrait/vertical composition (taller than wide)
-- The image should be a SCENE or LANDSCAPE — not just a pattern
-- NO faces visible (characters from behind only if included)
+Rules:
+- NO text, NO words, NO letters, NO numbers in the image
+- Portrait/vertical composition
+- Describe: art style + setting + lighting + atmosphere + specific elements + two silhouettes from behind
+- End with: masterpiece, ultra-detailed, cinematic composition, 8k, beautiful, emotional, romantic
+- 100-150 words maximum
 
-STRUCTURE YOUR PROMPT AS:
-[Art style] + [Main scene/setting] + [Lighting details] + [Atmosphere/mood] + [Specific visual elements] + [Color palette] + [Quality tags]
+Return ONLY the prompt text.`;
 
-Example for Naruto theme:
-"Anime cinematic illustration, hidden ninja village at dusk seen from above, ancient Japanese architecture with curved rooftops, giant stone mountain carvings in background, hundreds of warm orange and red paper lanterns floating upward, full moon rising behind misty mountains, cherry blossom petals swirling in wind, two small silhouettes standing on wooden bridge from behind, golden chakra energy particles glowing, deep purple and orange twilight sky, Makoto Shinkai art style, volumetric lighting, ultra-detailed, 8k resolution, masterpiece quality, emotional romantic atmosphere"
-
-Now write the prompt for the given theme. Be EXTREMELY specific and vivid. 100-180 words.
-Return ONLY the prompt text, nothing else.`;
-
-  const result = await generateWithFallback(prompt, { temperature: 0.95 });
-  return result.trim().replace(/^["']|["']$/g, ""); // Remove surrounding quotes
+  const result = await generateWithFallback(prompt, { temperature: 0.9 });
+  return result.trim().replace(/^["'`]|["'`]$/g, "");
 }
